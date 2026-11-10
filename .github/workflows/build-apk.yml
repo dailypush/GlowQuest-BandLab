@@ -4,32 +4,31 @@ on:
   push:
     paths:
       - '.github/workflows/build-apk.yml'
-      - 'source.bundle.b64'
       - 'app/**'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
 permissions:
-  contents: write
+  contents: read
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore the GlowQuest Android source
-        if: hashFiles('source.bundle.b64') != ''
-        run: |
-          base64 --decode source.bundle.b64 | tar -xJf -
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app build.gradle settings.gradle gradle.properties README.md
-          git diff --cached --quiet || { git commit -m "Publish full GlowQuest source from bundle" && git push; }
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -1)
+          fi
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
