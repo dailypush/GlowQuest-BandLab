@@ -25,6 +25,20 @@ jobs:
         run: |
           mkdir -p reports/screenshots
           npm run test:ui
+      - name: Compare screens with reviewed visual baselines
+        shell: bash
+        run: |
+          python3 -m venv /tmp/glowquest-visual
+          /tmp/glowquest-visual/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/glowquest-visual/bin/python tests/check_visual_regression.py
+      - name: Upload visual regression heatmaps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlowQuest-visual-diffs
+          path: reports/visual-diffs/*.png
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Upload screenshots (including failures)
         if: always()
         uses: actions/upload-artifact@v4
@@ -92,3 +106,39 @@ jobs:
           name: GlowQuest-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  emulator-screenshots:
+    name: Android emulator WebView screenshots
+    needs: build-debug-apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: GlowQuest-debug-APK
+          path: reports/build-apk
+      - name: Enable KVM hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot Android and capture app screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 tests/capture_android_emulator.py reports/build-apk/app-debug.apk
+      - name: Upload Android emulator screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlowQuest-Android-emulator-screenshots
+          path: reports/android-emulator/*.png
+          if-no-files-found: warn
+          retention-days: 30
