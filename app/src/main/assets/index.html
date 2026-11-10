@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0e0b25"><title>GlowQuest · Band Lab</title>
+<link rel="stylesheet" href="app.css">
+<script defer src="app.js"></script>
+</head><body>
+<div class="cosmos"><i></i><i></i><i></i><i></i><i></i></div>
+<div class="app-shell">
+  <header class="masthead">
+    <div class="brandmark" aria-hidden="true">✦</div>
+    <div class="brand"><div class="overline">THE LITTLE LIGHT LAB</div><h1>Glow<span>Quest</span></h1></div>
+    <button class="pill status-pill" id="statusPill" aria-label="Check Bluetooth" type="button"><span class="status-dot"></span><span id="statusLabel">Checking</span></button>
+  </header>
+  <div class="ribbon"><span>✧</span> Your very own pocket light show <span>✧</span></div>
+  <section class="hero" aria-label="MagicBand light preview">
+    <div class="starfield" aria-hidden="true">✦ <b>✧</b> ✳ <em>✦</em> ✧</div>
+    <div class="hero-label">YOUR LIGHT-UP WRISTBAND</div>
+    <div class="watch-glow" id="watchGlow">
+      <div class="watch-strap left"></div>
+      <div class="watch-face" id="watchFace">
+        <div class="led led-a" id="ledTL"></div>
+        <div class="led led-b" id="ledTR"></div>
+        <div class="led led-c" id="ledBL"></div>
+        <div class="led led-d" id="ledBR"></div>
+        <div class="led led-mid" id="ledC"><span>✦</span></div>
+      </div>
+      <div class="watch-strap right"></div>
+    </div>
+    <div class="current-caption"><span id="selectedEmoji">🌈</span><span id="currentName">Pick your first magic color!</span></div>
+    <div class="hero-sub">This is a preview. The real band will respond after you send a signal.</div>
+  </section>
+
+  <div class="connection" id="connection"><span>📡</span><span id="connectionMessage">Checking your phone’s Bluetooth superpowers…</span><button id="enableBtn" type="button" hidden>Enable</button></div>
+
+  <p class="fineprint" style="margin:-5px 4px 17px">Use with your own band away from other guests—BLE signals can reach nearby bands too.</p>
+
+  <nav class="tabs" aria-label="Lab adventures">
+    <button type="button" class="tab active" data-page="colors"><span>🎨</span> Colors</button>
+    <button type="button" class="tab" data-page="mix"><span>🪄</span> Mix</button>
+    <button type="button" class="tab" data-page="shows"><span>🎆</span> Shows</button>
+    <button type="button" class="tab" data-page="quest"><span>🏆</span> Quest</button>
+    <button type="button" class="tab" data-page="learn"><span>🔎</span> Learn</button>
+  </nav>
+
+  <main>
+    <section class="page active" id="page-colors">
+      <div class="section-head"><div><div class="kicker">ADVENTURE 01</div><h2>Pick a color <span>🎨</span></h2><p>Choose a color, then tap the big magic button!</p></div><span class="count-chip">25+ colors</span></div>
+      <div class="color-grid" id="colorGrid"></div>
+      <div class="hint"><span>💡</span> Some colors look different on the real LEDs. That's part of the science!</div>
+    </section>
+
+    <section class="page" id="page-mix">
+      <div class="section-head"><div><div class="kicker">ADVENTURE 02</div><h2>Mix your magic <span>🪄</span></h2><p>Pick two colors or paint each of your band's five lights.</p></div></div>
+      <div class="mode-toggle"><button class="active" type="button" data-mix="two">👯 Two colors</button><button type="button" data-mix="five">⭐ Five lights</button><button type="button" data-mix="rgb">🌈 RGB lab</button></div>
+      <div id="mix-two" class="mix-panel active"><div class="mix-labels"><div><span>Center color</span><b id="innerName">Red</b></div><div><span>Outside color</span><b id="outerName">Blue</b></div></div><div id="mixSwatches" class="mix-swatches"></div><div class="hint"><span>🎯</span> Tap the left or right circle to choose which color you're changing.</div><div class="pair-picks" id="pairPicks"></div></div>
+      <div id="mix-five" class="mix-panel"><p class="small-desc">Tap a light on the band preview above, then choose its color.</p><div id="ledTargetButtons" class="led-picks"></div><div id="ledColors" class="mix-swatches"></div><button id="rainbowFive" class="soft-btn" type="button">🌈 Make all five different!</button></div>
+      <div id="mix-rgb" class="mix-panel"><p class="small-desc">Create your own color using red, green and blue light.</p><div class="rgb-sample" id="rgbSample"></div><label class="range-label">❤️ Red <b id="rValue">35</b><input id="rSlider" type="range" min="0" max="63" value="35"></label><label class="range-label">💚 Green <b id="gValue">0</b><input id="gSlider" type="range" min="0" max="63" value="0"></label><label class="range-label">💙 Blue <b id="bValue">63</b><input id="bSlider" type="range" min="0" max="63" value="63"></label><p class="small-desc">The band uses 6-bit color channels here, so there are 64 steps per color.</p></div>
+      <button id="surpriseBtn" class="soft-btn wide" type="button">🎲 Surprise me with a color mix!</button>
+    </section>
+
+    <section class="page" id="page-shows">
+      <div class="section-head"><div><div class="kicker">ADVENTURE 03</div><h2>Light show time <span>🎆</span></h2><p>Real community-researched MagicBand+ command patterns. Try each one!</p></div></div>
+      <div class="show-filter" id="showFilters"><button class="active" data-show="all" type="button">All</button><button data-show="show" type="button">✨ Shows</button><button data-show="fade" type="button">🌅 Fades</button><button data-show="animation" type="button">🌀 Animations</button></div>
+      <div class="show-grid" id="showGrid"></div>
+      <div class="hint"><span>⚠️</span> Some show effects can continue for several seconds after the phone stops sending. Tap <b>Lights off</b> to send the cancel color.</div>
+    </section>
+
+    <section class="page" id="page-quest">
+      <div class="section-head"><div><div class="kicker">ADVENTURE 04</div><h2>Color detective <span>🏆</span></h2><p>Can you find the secret color and earn a star?</p></div></div>
+      <div class="quest-card"><div class="medal">🏅</div><div class="quest-score">Stars earned <strong id="score">0</strong></div><div class="secret">FIND THIS COLOR</div><div id="questTarget" class="quest-target">💜 Purple</div><p>Go to Colors, find it, and select it to win. You can still send it to your band!</p><button class="soft-btn" id="newQuest" type="button">🔄 New challenge</button><div class="quest-result" id="questResult" aria-live="polite">You can do it! ✨</div></div>
+    </section>
+
+    <section class="page" id="page-learn">
+      <div class="section-head"><div><div class="kicker">ADVENTURE 05</div><h2>Secret science <span>🔎</span></h2><p>Find out how a tiny radio signal becomes light!</p></div></div>
+      <div class="science-card"><div class="science-icon">📱</div><div><h3>Your phone is a tiny radio</h3><p>It sends short Bluetooth Low Energy (BLE) advertisements. A compatible wristband can hear these messages without pairing.</p></div></div>
+      <div class="science-card"><div class="science-icon">🧩</div><div><h3>Every byte is a clue</h3><p><code>0x0183</code> is the company ID used in the documented packets. Other bytes tell the band what colors and effects to show.</p></div></div>
+      <div class="science-card"><div class="science-icon">🕵️</div><div><h3>Not quite a remote control</h3><p>BLE advertisements are broadcasts, so other nearby bands may hear them too. Play with your own band away from other guests.</p></div></div>
+      <div class="packet-card"><div class="packet-header"><b>🔬 Packet magnifier</b><span>LIVE PREVIEW</span></div><div class="packet-parts" id="packetParts"></div><div class="packet-hex" id="packetHex">0183 E100E90500090E02B0</div><p id="packetHelp">Choose a color to inspect its message.</p></div>
+      <div class="quiz-card"><strong>🧠 Brain teaser!</strong><p>Which technology sends our light-show commands?</p><div class="quiz-options"><button type="button" data-quiz="nfc">NFC taps</button><button type="button" data-quiz="ble">Bluetooth radio</button><button type="button" data-quiz="wifi">Wi-Fi</button></div><div id="quizAnswer" aria-live="polite"></div></div>
+      <div class="grownup"><h3>🧑‍🔬 Grown-up laboratory</h3><p>Advanced experiments: custom HEX, company ID, optional wake ping, and broadcast duration. Not needed for kid mode.</p><button id="unlockLab" class="soft-btn" type="button">🔒 Press and hold to unlock</button><div id="advanced" hidden>
+        <label>Manufacturer ID (4 hex digits)<input id="company" type="text" value="0183" maxlength="4" spellcheck="false"></label>
+        <label>Manufacturer data (HEX bytes, no company ID)<textarea id="hexInput" spellcheck="false" rows="3">E100E90500090E02B0</textarea></label>
+        <label>Transmit for <select id="duration"><option value="900">0.9 seconds</option><option value="1800" selected>1.8 seconds</option><option value="3000">3 seconds</option><option value="3500">3.5 seconds</option></select></label>
+        <label class="checkbox-line"><input id="wake" type="checkbox" checked> Send 0.5-second wake ping first (Disney ID only)</label>
+        <button id="sendRaw" class="soft-btn wide" type="button">🧪 Send test packet</button>
+        <button id="lockLab" class="text-button" type="button">Lock lab</button>
+      </div></div>
+      <p class="fineprint">GlowQuest is an independent educational project, not affiliated with or endorsed by Disney. Effect compatibility varies by firmware and radio hardware. No NFC passes, accounts, location, internet or tracking are used.</p>
+    </section>
+  </main>
+</div>
+<div class="bottom-area"><div class="bottom-inner"><button id="offBtn" type="button" class="off-button" aria-label="Send lights off">🌙<small>Lights off</small></button><button id="sendBtn" type="button" class="main-button"><span id="sendIcon">✨</span><span id="sendText">SEND MAGIC!</span></button><button id="stopBtn" type="button" class="stop-button" aria-label="Stop transmitting">⏹<small>Stop signal</small></button></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body></html>
