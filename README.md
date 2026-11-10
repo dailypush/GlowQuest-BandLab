@@ -73,6 +73,16 @@ After Gherkin and visual tests pass, CI builds the Android debug APK. An additio
 
 To view the screenshots: **GitHub → Actions → Build GlowQuest Android APK → latest run → Artifacts**. Look for `GlowQuest-UI-screenshots`, `GlowQuest-Android-emulator-screenshots`, `GlowQuest-Gherkin-reports`, and (when a visual change is detected) `GlowQuest-visual-diffs`. The APK artifact is `GlowQuest-debug-APK`. Reference fingerprints should be updated only after visually reviewing and approving intended design changes.
 
+## Download and install the latest beta on Android
+
+**Start with the [GitHub Releases page](https://github.com/dailypush/GlowQuest-BandLab/releases).** The beta release provides a direct downloadable `GlowQuest-BandLab-*.apk` file under **Assets**. This is easier than downloading a short-lived GitHub Actions artifact ZIP.
+
+To sideload: download the APK on your Android device, open it from Files/Downloads, approve installation from that source if Android asks, and then launch GlowQuest. Grant Nearby devices permission and enable Bluetooth. Only test on your own MagicBand+ in an uncrowded area: these BLE signals are broadcasts.
+
+**Beta warning:** these APKs are debug-signed for testing. A later APK may use a different signing key, requiring you to uninstall the previous debug app before installing the new one. Uninstalling can erase locally stored stars and settings. A production release with a persistent signing key is a future improvement.
+
+The [APK build workflow](https://github.com/dailypush/GlowQuest-BandLab/actions/workflows/build-apk.yml) runs Gherkin scenarios, visual checks, compiles the app, and captures Android emulator screenshots. The [release workflow](https://github.com/dailypush/GlowQuest-BandLab/actions/workflows/publish-beta-release.yml) publishes a beta APK only after that full workflow passes on `main`. It creates version `v2.0.0-beta.1` once, rather than silently replacing an existing downloadable package.
+
 ## How to use
 
 1. Charge your MagicBand+ and make sure it is powered on.
