@@ -1,18 +1,70 @@
 name: Build GlowQuest Android APK
 on:
   workflow_dispatch:
+  pull_request:
+    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
   push:
-    paths:
-      - '.github/workflows/build-apk.yml'
-      - 'app/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle.properties'
+    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
 permissions:
   contents: read
 jobs:
-  build-debug-apk:
+  ui-acceptance:
+    name: Gherkin scenarios + screenshots
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Cucumber and Playwright
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Gherkin acceptance tests
+        run: |
+          mkdir -p reports/screenshots
+          npm run test:ui
+      - name: Upload screenshots (including failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlowQuest-UI-screenshots
+          path: reports/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Upload Cucumber reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlowQuest-Gherkin-reports
+          path: |
+            reports/cucumber.html
+            reports/cucumber.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Add test summary
+        if: always()
+        shell: bash
+        run: |
+          echo '## GlowQuest UI tests' >> "$GITHUB_STEP_SUMMARY"
+          if test -f reports/cucumber.json; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const features = JSON.parse(fs.readFileSync('reports/cucumber.json','utf8'));
+          const scenarios = features.flatMap(f=>f.elements||[]).filter(s=>s.type==='scenario');
+          const failed = scenarios.filter(s=>(s.steps||[]).some(x=>x.result?.status==='failed'));
+          console.log('**'+(scenarios.length-failed.length)+'/'+scenarios.length+' scenarios passed.**');
+          console.log('Download the screenshots and Cucumber HTML reports in the run artifacts.');
+          NODE
+          else
+            echo 'No report available; see the setup logs.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+  build-debug-apk:
+    name: Android APK (after Gherkin tests)
+    needs: ui-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

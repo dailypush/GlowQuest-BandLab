@@ -1,0 +1,150 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { readFile, mkdir } = require('node:fs/promises');
+const { createServer } = require('node:http');
+const { join, resolve } = require('node:path');
+const { BeforeAll, AfterAll, Before, After, Given, When, Then, Status, setDefaultTimeout } = require('@cucumber/cucumber');
+const { chromium } = require('playwright');
+setDefaultTimeout(30000);
+const images = resolve('reports/screenshots');
+const assets = resolve('app/src/main/assets');
+let server, appUrl;
+
+BeforeAll(async function () {
+  server = createServer(async (req, res) => {
+    const file = (req.url || '/').split('?')[0].slice(1) || 'index.html';
+    const mime = {'index.html':'text/html','app.js':'application/javascript','app.css':'text/css'};
+    if (!Object.prototype.hasOwnProperty.call(mime,file)) { res.writeHead(404).end(); return; }
+    try {
+      const body = await readFile(join(assets,file));
+      res.writeHead(200,{'Content-Type':mime[file]+'; charset=utf-8'}); res.end(body);
+    } catch(e) { res.writeHead(500).end('Missing bundled app asset'); }
+  });
+  await new Promise(done=>server.listen(0,'127.0.0.1',done));
+  appUrl = 'http://127.0.0.1:'+server.address().port+'/index.html';
+});
+AfterAll(async function () {
+  if(server) await new Promise(done=>server.close(done));
+});
+Before(async function () {
+  this.browser = await chromium.launch({headless:true});
+  this.context = await this.browser.newContext({
+    viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
+  });
+  await this.context.addInitScript(() => {
+    window.__glowMock={sent:[],stops:0};
+    window.BandNative={
+      status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
+      transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
+      stop:()=>{window.__glowMock.stops++},
+      off:()=>{},enable:()=>{}
+    };
+  });
+  this.page = await this.context.newPage();
+});
+After(async function (scenario) {
+  if(this.page && scenario.result?.status!==Status.PASSED) {
+    try {
+      await mkdir(images,{recursive:true});
+      const name='failed-'+scenario.pickle.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.png';
+      const png=await this.page.screenshot({path:join(images,name),fullPage:true});
+      await this.attach(png,'image/png');
+    } catch(e) { console.error('Failure screenshot:',e.message); }
+  }
+  await this.context?.close();
+  await this.browser?.close();
+});
+Given('GlowQuest is open on a simulated Android phone',async function () {
+  await this.page.goto(appUrl,{waitUntil:'load'});
+  await this.page.locator('#colorGrid .color-tile').first().waitFor();
+  await this.page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}'});
+  assert.equal(await this.page.locator('#statusLabel').innerText(),'BLE READY');
+});
+When('I open the {string} adventure',async function (name) {
+  await this.page.locator('.tab[data-page="'+name.toLowerCase()+'"]').click();
+});
+When('I switch to tablet size',async function () {
+  await this.page.setViewportSize({width:820,height:1180});
+});
+Then('I save a {string} screenshot',async function (name) {
+  await mkdir(images,{recursive:true});
+  const png=await this.page.screenshot({
+    path:join(images,name+'.png'),fullPage:true,animations:'disabled'
+  });
+  await this.attach(png,'image/png');
+});
+Then('the screen fits without horizontal scrolling',async function () {
+  const size=await this.page.evaluate(()=>({
+    viewport:document.documentElement.clientWidth,page:document.documentElement.scrollWidth
+  }));
+  assert.ok(size.page<=size.viewport+2,'Horizontal overflow: '+JSON.stringify(size));
+});
+When('I select the {string} color',async function (name) {
+  await this.page.locator('.color-tile').filter({hasText:new RegExp('^'+name+'$','i')}).click();
+});
+Then('the band preview says {string}',async function (name) {
+  assert.equal((await this.page.locator('#currentName').innerText()).trim(),name);
+});
+Then('the packet contains {string}',async function (hex) {
+  const raw=(await this.page.locator('#packetHex').innerText()).replace(/\s/g,'');
+  assert.ok(raw.endsWith(hex),'Unexpected packet '+raw);
+});
+When('I press Send Magic',async function () { await this.page.locator('#sendBtn').click(); });
+Then('the mock radio gets {string} for company {int}',async function (hex,company) {
+  const sent=await this.page.evaluate(()=>window.__glowMock.sent);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].company,company);assert.equal(sent[0].hex,hex);
+  assert.ok(sent[0].ms>=350&&sent[0].ms<=3500);
+});
+When('I choose the five-light mixer',async function () {
+  await this.page.locator('[data-mix="five"]').click();
+});
+When('I tap the rainbow-five button',async function () {
+  await this.page.locator('#rainbowFive').click();
+});
+Then('the packet contains five color bytes',async function () {
+  const raw=(await this.page.locator('#packetHex').innerText()).replace(/\s/g,'').slice(4);
+  assert.match(raw,/^E100E909000E0F[0-9A-F]{10}B0$/);
+});
+When('I filter to fades',async function () {
+  await this.page.locator('[data-show="fade"]').click();
+  assert.ok(await this.page.locator('#showGrid .show-card').count()>=5);
+});
+When('I select the {string} show',async function (name) {
+  await this.page.locator('#showGrid .show-card').filter({hasText:name}).click();
+});
+When('I answer Bluetooth radio',async function () {
+  await this.page.locator('[data-quiz="ble"]').click();
+});
+Then('I see the quiz success message',async function () {
+  assert.match(await this.page.locator('#quizAnswer').innerText(),/Correct!/);
+});
+When('I solve the color challenge',async function () {
+  const target=(await this.page.locator('#questTarget').innerText()).trim();
+  const names=await this.page.locator('.color-tile').allTextContents();
+  const answer=names.find(n=>target.endsWith(n.trim()));
+  assert.ok(answer,'No matching color for '+target);
+  await this.page.locator('.tab[data-page="colors"]').click();
+  await this.page.locator('.color-tile').filter({hasText:new RegExp('^'+answer.trim()+'$','i')}).click();
+});
+Then('my star score is {int}',async function (score) {
+  assert.equal(Number(await this.page.locator('#score').innerText()),score);
+});
+When('I unlock the grown-up lab',async function () {
+  await this.page.locator('#unlockLab').dispatchEvent('pointerdown');
+  await this.page.waitForTimeout(1200);
+  await this.page.locator('#unlockLab').dispatchEvent('pointerup');
+  assert.ok(await this.page.locator('#advanced').isVisible());
+});
+When('I enter {string} as hex',async function (hex) { await this.page.locator('#hexInput').fill(hex); });
+When('I press Send test packet',async function () { await this.page.locator('#sendRaw').click(); });
+Then('I see a hex validation warning',async function () {
+  assert.match(await this.page.locator('#toast').innerText(),/1–24 complete HEX bytes/);
+});
+Then('the mock radio has sent nothing',async function () {
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
+});
+When('I press Stop signal',async function () { await this.page.locator('#stopBtn').click(); });
+Then('the native stop command is requested',async function () {
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.stops),1);
+});
