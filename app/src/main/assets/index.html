@@ -4,6 +4,7 @@
 <meta name="theme-color" content="#0e0b25"><title>GlowQuest · Band Lab</title>
 <link rel="stylesheet" href="app.css">
 <script defer src="app.js"></script>
+<script defer src="fx.js"></script>
 </head><body>
 <div class="cosmos"><i></i><i></i><i></i><i></i><i></i></div>
 <div class="app-shell">
@@ -61,8 +62,41 @@
 
     <section class="page" id="page-shows">
       <div class="section-head"><div><div class="kicker">ADVENTURE 03</div><h2>Light show time <span>🎆</span></h2><p>Real community-researched MagicBand+ command patterns. Try each one!</p></div></div>
-      <div class="show-filter" id="showFilters"><button class="active" data-show="all" type="button">All</button><button data-show="show" type="button">✨ Shows</button><button data-show="fade" type="button">🌅 Fades</button><button data-show="animation" type="button">🌀 Animations</button></div>
+      <div class="show-filter" id="showFilters"><button class="active" data-show="all" type="button">All</button><button data-show="show" type="button">✨ Shows</button><button data-show="fade" type="button">🌅 Fades</button><button data-show="animation" type="button">🌀 Animations</button><button data-show="studio" type="button">🧪 FX Studio</button></div>
       <div class="show-grid" id="showGrid"></div>
+      <section class="studio-panel" id="fxStudio" hidden aria-label="Custom light and vibration effects">
+        <h3>🧪 Build your own band effect</h3>
+        <p>Choose which LEDs glow, how long the band responds, how it fades, and its vibration pattern.</p>
+        <div class="fx-controls">
+          <label>Color<select id="fxColor" aria-label="Effect color"></select></label>
+          <label>Light selection<select id="fxMask" aria-label="LED spotlight">
+            <option value="0">All five LEDs</option><option value="1">Top right</option><option value="2">Bottom right</option>
+            <option value="3">Bottom left</option><option value="4">Top left</option>
+          </select></label>
+          <label>Band vibration<select id="fxVibration" aria-label="Band vibration">
+            <option value="0">None (gentle)</option><option value="1">Single tap pattern</option>
+            <option value="2">Double tap pattern</option><option value="3">Triple tap pattern</option>
+            <option value="8">Quick flutter pattern</option><option value="7">Long buzz pattern</option>
+          </select></label>
+          <label>Band light duration<select id="fxTime" aria-label="Band effect time">
+            <option value="1">Short (~8 s)</option><option value="5" selected>Medium (~14 s)</option>
+            <option value="9">Long (~20 s)</option><option value="14">Extra long (~28 s)</option>
+          </select></label>
+          <label>Fade out<select id="fxFade" aria-label="Fade-out duration">
+            <option value="0">None</option><option value="1" selected>~1 second</option>
+            <option value="2">~2 seconds</option><option value="3">~3 seconds</option>
+          </select></label>
+        </div>
+        <p class="fx-estimate" id="fxEstimate" aria-live="polite"></p>
+        <p class="small-desc">The center LED cannot be isolated with this spotlight command; use <b>Mix → Five lights</b> to paint it independently. Never-on/persistent timing is intentionally disabled.</p>
+        <button id="fxReset" type="button" class="soft-btn">↺ Gentle defaults</button>
+        <div class="fx-history">
+          <div class="fx-history-head"><h3>📒 My effect experiments</h3><span id="fxHistoryCount">0 saved</span></div>
+          <p id="fxHistoryEmpty">After you send an effect, tell GlowQuest whether it worked. Results stay on this phone.</p>
+          <ul id="fxHistoryItems"></ul>
+          <button class="text-button" id="fxClearNotes" type="button">Clear local experiment history</button>
+        </div>
+      </section>
       <div class="hint"><span>⚠️</span> Some show effects can continue for several seconds after the phone stops sending. Tap <b>Lights off</b> to send the cancel color.</div>
     </section>
 
@@ -91,5 +125,16 @@
   </main>
 </div>
 <div class="bottom-area"><div class="bottom-inner"><button id="offBtn" type="button" class="off-button" aria-label="Send lights off">🌙<small>Lights off</small></button><button id="sendBtn" type="button" class="main-button"><span id="sendIcon">✨</span><span id="sendText">SEND MAGIC!</span></button><button id="stopBtn" type="button" class="stop-button" aria-label="Stop transmitting">⏹<small>Stop signal</small></button></div></div>
+
+<section class="fx-feedback" id="fxFeedback" hidden aria-labelledby="fxFeedbackTitle" role="region">
+  <div class="fx-feedback-top"><strong id="fxFeedbackTitle">Did the MagicBand+ respond?</strong><button id="fxFeedbackSkip" type="button" aria-label="Dismiss effect feedback">✕</button></div>
+  <p id="fxFeedbackName">Watch your band, then choose what happened.</p>
+  <div class="fx-feedback-actions">
+    <button type="button" data-fx-outcome="worked">✅ Worked!</button>
+    <button type="button" data-fx-outcome="different">✨ Different</button>
+    <button type="button" data-fx-outcome="none">❌ No response</button>
+  </div>
+  <small>Only your observation is saved locally. Bluetooth broadcasting cannot confirm delivery.</small>
+</section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body></html>

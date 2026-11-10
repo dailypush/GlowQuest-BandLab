@@ -53,7 +53,8 @@ public class MainActivity extends Activity {
             private boolean allowed(String url) {
                 return HOME.equals(url) ||
                     "file:///android_asset/app.css".equals(url) ||
-                    "file:///android_asset/app.js".equals(url);
+                    "file:///android_asset/app.js".equals(url) ||
+                    "file:///android_asset/fx.js".equals(url);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !allowed(request.getUrl().toString());

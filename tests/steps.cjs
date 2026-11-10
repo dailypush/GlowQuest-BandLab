@@ -13,7 +13,7 @@ let server, appUrl;
 BeforeAll(async function () {
   server = createServer(async (req, res) => {
     const file = (req.url || '/').split('?')[0].slice(1) || 'index.html';
-    const mime = {'index.html':'text/html','app.js':'application/javascript','app.css':'text/css'};
+    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','app.css':'text/css'};
     if (!Object.prototype.hasOwnProperty.call(mime,file)) { res.writeHead(404).end(); return; }
     try {
       const body = await readFile(join(assets,file));
@@ -147,4 +147,41 @@ Then('the mock radio has sent nothing',async function () {
 When('I press Stop signal',async function () { await this.page.locator('#stopBtn').click(); });
 Then('the native stop command is requested',async function () {
   assert.equal(await this.page.evaluate(()=>window.__glowMock.stops),1);
+});
+
+
+When('I open the Effect Studio', async function () {
+  await this.page.locator('[data-show="studio"]').click();
+  assert.ok(await this.page.locator('#fxStudio').isVisible(), 'Studio panel not visible');
+});
+When('I configure a red top-right double-tap effect with a two-second fade', async function () {
+  await this.page.locator('#fxColor').selectOption('21');
+  await this.page.locator('#fxMask').selectOption('1');
+  await this.page.locator('#fxVibration').selectOption('2');
+  await this.page.locator('#fxTime').selectOption('5');
+  await this.page.locator('#fxFade').selectOption('2');
+});
+Then('the effect packet never enables persistent lighting', async function () {
+  const raw=(await this.page.locator('#packetHex').innerText()).replace(/\s/g,'').slice(4);
+  const timing=parseInt(raw.slice(10,12),16);
+  assert.equal(timing & 0x80,0,'Persistent LED flag was unexpectedly set');
+});
+Then('the feedback prompt appears', async function () {
+  assert.ok(await this.page.locator('#fxFeedback').isVisible());
+});
+When('I mark the effect as working', async function () {
+  await this.page.locator('[data-fx-outcome="worked"]').click();
+});
+Then('the result is saved locally', async function () {
+  const entries=await this.page.evaluate(()=>JSON.parse(localStorage.getItem('glowquest-effect-notes-v1')||'[]'));
+  assert.equal(entries.length,1);
+  assert.equal(entries[0].result,'worked');
+  assert.equal(entries[0].hex,'E100E90500090E02B0');
+});
+When('I turn vibration off',async function () {
+  await this.page.locator('#fxVibration').selectOption('0');
+});
+Then('the FX Studio has no center-only spotlight option',async function () {
+  assert.equal(await this.page.locator('#fxMask option').count(),5);
+  assert.ok(!(await this.page.locator('#fxMask').innerText()).includes('Center'));
 });

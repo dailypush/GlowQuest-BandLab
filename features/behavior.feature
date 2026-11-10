@@ -49,3 +49,29 @@ Feature: GlowQuest kid-friendly interactions
     Given GlowQuest is open on a simulated Android phone
     When I press Stop signal
     Then the native stop command is requested
+
+
+  Scenario: Effect Studio builds masked color, vibration and fade packets
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Effect Studio
+    And I configure a red top-right double-tap effect with a two-second fade
+    Then the packet contains "E100E90500250E35B2"
+    And the effect packet never enables persistent lighting
+    When I press Send Magic
+    Then the mock radio gets "E100E90500250E35B2" for company 387
+
+  Scenario: Feedback is a locally saved human observation
+    Given GlowQuest is open on a simulated Android phone
+    When I press Send Magic
+    Then the feedback prompt appears
+    When I mark the effect as working
+    Then the result is saved locally
+
+  Scenario: Studio offers a center-safe LED spotlight and gentle vibration mode
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Effect Studio
+    And I turn vibration off
+    Then the FX Studio has no center-only spotlight option
+    And the effect packet never enables persistent lighting

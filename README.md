@@ -2,6 +2,17 @@
 
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
+
+## GlowQuest 2.1 beta — Effect Studio
+
+**New in 2.1:** Open **Shows → 🧪 FX Studio** to combine a chosen palette color with a documented outer-LED mask (all, top-right, bottom-right, bottom-left, top-left), a vibration pattern (off/single/double/triple/flutter/long buzz), estimated band duration and 0–3 second fade.
+
+This builds an **E9 05 manufacturer advertisement** with its timing byte, mask+color byte and vibration nibble. It deliberately never enables the persistent/always-on flag. The phone itself still transmits only a short advertisement burst, **not** a continuous radio signal. Estimated LED effect duration is distinct from broadcast duration; some short settings can cause a double flash on certain firmware.
+
+There is also a new **“Did the band respond?”** prompt after sending a command. It saves **your observation**, not an automatic success acknowledgment, entirely on your phone. Open FX Studio to see recent results and clear them with two taps. Uninstalling the app can erase this local data.
+
+Compatibility of individual LED masks, vibration patterns and fade timing **must be checked on a real MagicBand+**, since the protocol is community reverse-engineered. Center-only spotlights require a different command; **Mix → Five lights** remains the way to customize the center LED. See [EMCOT's timing, mask, vibration reference](https://emcot.world/Disney_MagicBand%2B_Bluetooth_Codes).
+
 ## App features
 
 - **🎨 Colors:** 25 easy kid-facing palette colors (the source palette includes 32 slots, but several are duplicates, invisible or "Off").
