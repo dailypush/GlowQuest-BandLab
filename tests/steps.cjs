@@ -32,7 +32,7 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0,scans:0,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
+    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
@@ -60,13 +60,23 @@ Before(async function () {
         window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
       },
       fireworksStatus:()=>JSON.stringify(window.__glowMock.fireworks),
-      scanBands:()=>{
+      scanBands:(all)=>{
         window.__glowMock.scans++;
+        window.__glowMock.scanModes.push(all);
+        const candidates=[
+          {id:'A',label:'MagicBand+ TEST-A',nameMatch:true,fe03:true,disneyId:false,candidate:true,rssi:-43,addressHint:'AA:01',serial:null},
+          {id:'B',label:'Possible BLE band',nameMatch:false,fe03:false,disneyId:true,candidate:true,rssi:-54,addressHint:'AA:02',serial:null}
+        ];
+        const extra={id:'C',label:'Unnamed BLE device',nameMatch:false,fe03:false,
+          disneyId:false,candidate:false,rssi:-61,addressHint:'AA:03',serial:null};
         window.onScoutStatus(JSON.stringify({scanning:false,status:'Mock scan finished',
-          devices:[
-            {id:'A',label:'MagicBand+ TEST-A',nameMatch:true,fe03:true,rssi:-43,addressHint:'AA:01',serial:null},
-            {id:'B',label:'MagicBand+ TEST-B',nameMatch:true,fe03:true,rssi:-54,addressHint:'AA:02',serial:null}
-          ]}));
+          receivedPackets:25,uniqueDevices:3,candidateCount:2,showAll:all,
+          devices:all?[...candidates,extra]:candidates}));
+      },
+      clearScanBands:()=>{
+        window.__glowMock.clears++;
+        window.onScoutStatus(JSON.stringify({scanning:false,status:'Scan list cleared',
+          receivedPackets:0,uniqueDevices:0,candidateCount:0,devices:[]}));
       },
       stopScanBands:()=>{},
       off:()=>{},enable:()=>{}
@@ -198,18 +208,6 @@ Then('the effect packet never enables persistent lighting', async function () {
   const timing=parseInt(raw.slice(10,12),16);
   assert.equal(timing & 0x80,0,'Persistent LED flag was unexpectedly set');
 });
-Then('the feedback prompt appears', async function () {
-  assert.ok(await this.page.locator('#fxFeedback').isVisible());
-});
-When('I mark the effect as working', async function () {
-  await this.page.locator('[data-fx-outcome="worked"]').click();
-});
-Then('the result is saved locally', async function () {
-  const entries=await this.page.evaluate(()=>JSON.parse(localStorage.getItem('glowquest-effect-notes-v1')||'[]'));
-  assert.equal(entries.length,1);
-  assert.equal(entries[0].result,'worked');
-  assert.equal(entries[0].hex,'E100E90500090E02B0');
-});
 When('I turn vibration off',async function () {
   await this.page.locator('#fxVibration').selectOption('0');
 });
@@ -301,4 +299,26 @@ Then('the native sequencer receives the yellow orange white sweep',async functio
 Then('the show explains that it does not target individual watches',async function () {
   assert.match(await this.page.locator('#fireworksCreator').innerText(),/not live proximity sensing/i);
   assert.match(await this.page.locator('#fireworksCreator').innerText(),/all nearby compatible watches/i);
+});
+
+
+Then('the effect feedback and history controls are absent',async function () {
+  assert.equal(await this.page.locator('#fxFeedback,#fxHistoryItems,#fxClearNotes').count(),0);
+});
+When('I enable all BLE diagnostics',async function () {
+  await this.page.locator('#scoutDiagnostic').check();
+});
+Then('the scanner shows received packets and a generic BLE device',async function () {
+  assert.match(await this.page.locator('#scoutTraffic').innerText(),/25 advertisements received/);
+  assert.equal(await this.page.locator('.scout-device').count(),3);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.scanModes.at(-1)),true);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
+});
+When('I clear the scan results',async function () {
+  await this.page.locator('#scoutReset').click();
+});
+Then('the scan counts and device list are cleared',async function () {
+  assert.equal(await this.page.locator('.scout-device').count(),0);
+  assert.match(await this.page.locator('#scoutTraffic').innerText(),/^0 advertisements received/);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.clears),1);
 });

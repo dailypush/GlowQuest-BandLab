@@ -1,19 +1,9 @@
 'use strict';
-/* GlowQuest 2.1 Effect Studio.
- * Built on community-documented E905 timing, LED-mask and vibration bytes.
- * Local feedback is an observation, never an automatic receipt from the band.
- */
+/* GlowQuest Effect Studio — mask, vibration, duration and fade controls. */
 (() => {
   const ui = (id) => document.getElementById(id);
-  const STORAGE = 'glowquest-effect-notes-v1';
-  const MAX_NOTES = 40;
-  let notes = [];
-  let pending = null;
-
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE) || '[]');
-    if (Array.isArray(stored)) notes = stored.filter(x => x && typeof x.name === 'string').slice(0, MAX_NOTES);
-  } catch (ignored) { notes = []; }
+  // Remove data from the retired effect-feedback feature.
+  try { localStorage.removeItem('glowquest-effect-notes-v1'); } catch (ignored) {}
 
   const readNum = id => Number(ui(id).value);
   const h = n => (n & 255).toString(16).toUpperCase().padStart(2,'0');
@@ -52,50 +42,6 @@
       'Phone broadcasting remains limited to a short burst.';
   }
 
-  function renderNotes() {
-    const list = ui('fxHistoryItems');
-    list.textContent = '';
-    ui('fxHistoryEmpty').hidden = notes.length > 0;
-    for (const note of notes.slice(0,8)) {
-      const li = document.createElement('li');
-      const title = document.createElement('strong');
-      title.textContent = note.name;
-      const detail = document.createElement('small');
-      detail.textContent = (outcomes[note.result] || 'Reported') + ' • ' + (note.date || '');
-      li.append(title,detail);
-      list.appendChild(li);
-    }
-    ui('fxHistoryCount').textContent = notes.length + ' saved';
-  }
-
-  function remember(result) {
-    if (!pending) return;
-    const now = new Date();
-    notes.unshift({
-      name: pending.name.slice(0,130),
-      hex: pending.hex.slice(0,48),
-      result,
-      date: now.toLocaleDateString(),
-      at: now.toISOString()
-    });
-    notes = notes.slice(0,MAX_NOTES);
-    try {localStorage.setItem(STORAGE,JSON.stringify(notes));}
-    catch (ignored) {toast('Feedback could not be saved on this device.');}
-    pending = null;
-    ui('fxFeedback').hidden = true;
-    renderNotes();
-    toast('Experiment saved on this phone! ⭐');
-  }
-
-  function startFeedback() {
-    // Only show feedback for an actual requested native transmission.
-    // This does NOT imply radio delivery or MagicBand+ acknowledgment.
-    if (!window.BandNative || Date.now() - lastSend > 350) return;
-    pending = {name:selected.name,hex:selected.hex};
-    ui('fxFeedbackName').textContent = pending.name;
-    ui('fxFeedback').hidden = false;
-  }
-
   // The existing filter calls renderShows(). A "studio" filter hides the preset
   // cards, and this panel takes their place without altering existing presets.
   const studioButton = document.querySelector('[data-show="studio"]');
@@ -127,27 +73,4 @@
     rebuild();
     toast('Effect Studio reset to gentle defaults.');
   });
-  ui('sendBtn').addEventListener('click', startFeedback);
-  ui('offBtn').addEventListener('click', () => { pending=null; ui('fxFeedback').hidden=true; });
-  ui('stopBtn').addEventListener('click', () => { pending=null; ui('fxFeedback').hidden=true; });
-  ui('fxFeedbackSkip').addEventListener('click', () => {
-    pending=null; ui('fxFeedback').hidden=true;
-  });
-  document.querySelectorAll('[data-fx-outcome]').forEach(btn =>
-    btn.addEventListener('click', () => remember(btn.dataset.fxOutcome)));
-  ui('fxClearNotes').addEventListener('click', () => {
-    const btn=ui('fxClearNotes');
-    if (btn.dataset.confirm !== 'yes') {
-      btn.dataset.confirm='yes';
-      btn.textContent='Tap again to clear all saved tests';
-      return;
-    }
-    notes=[];
-    try {localStorage.removeItem(STORAGE);} catch (ignored) {}
-    btn.dataset.confirm='no';
-    btn.textContent='Clear local experiment history';
-    renderNotes();
-    toast('Experiment history cleared.');
-  });
-  renderNotes();
 })();

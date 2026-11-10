@@ -2,7 +2,7 @@
 
 
 /* v2.1 Effects Studio: keep kid mode simple, but offer flexible adult experiments. */
-#fxStudio[hidden],#fxFeedback[hidden],#showGrid[hidden],#fxHistoryEmpty[hidden]{display:none!important}
+#fxStudio[hidden],#showGrid[hidden]{display:none!important}
 .studio-panel{background:#201a44;border:1px solid #7860a6;border-radius:22px;padding:17px;margin:15px 0}
 .studio-panel h3{font-size:17px;margin:3px 0 8px;color:#f4dcff}
 .studio-panel p{line-height:1.5}
@@ -11,20 +11,6 @@
 .fx-controls label:last-child{grid-column:1/-1}
 .fx-controls select{min-width:0;width:100%;border-radius:12px;padding:11px 7px;border:1px solid #a98bdb;background:#302656;color:#fff;font-size:13px}
 .fx-estimate{border:1px solid #6874a4;border-radius:12px;padding:12px;background:#252c56;color:#e6e9ff}
-.fx-history{margin-top:22px;border-top:1px solid #ffffff2c;padding-top:14px}
-.fx-history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.fx-history-head span{font-size:11px;color:#c9b0fb}
-#fxHistoryItems{list-style:none;padding:0;margin:9px 0}
-#fxHistoryItems li{padding:9px 0;display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #ffffff20;overflow-wrap:anywhere}
-#fxHistoryItems strong{font-size:12px}
-#fxHistoryItems small{font-size:11px;color:#b9e8d2}
-.fx-feedback{position:fixed;z-index:30;left:50%;bottom:100px;transform:translateX(-50%);width:min(calc(100% - 22px),520px);padding:14px;border-radius:20px;background:#29204e;box-shadow:0 9px 35px #02010ad9;border:2px solid #cda1ff}
-.fx-feedback-top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px}
-.fx-feedback-top button{border:0;background:transparent;color:white;font-size:22px}
-.fx-feedback p{font-size:11px;margin:5px 0 9px;line-height:1.35}
-.fx-feedback-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.fx-feedback-actions button{border-radius:13px;border:1px solid #a595d9;background:#58418a;color:white;padding:10px 4px;font-weight:800;font-size:11px}
-.fx-feedback small{display:block;font-size:10px;color:#c8b4ed;margin-top:10px}
 @media(min-width:570px){.fx-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.fx-controls label:last-child{grid-column:auto}}
 @media(max-width:350px){.fx-controls{grid-template-columns:1fr}.fx-controls label:last-child{grid-column:auto}.fx-feedback-actions{gap:4px}.fx-feedback-actions button{font-size:10px}}
 
@@ -78,3 +64,9 @@
 .walkby-colors span{text-align:center}
 @media(min-width:700px){.firework-cues{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:350px){.firework-cue-controls{grid-template-columns:1fr}.walkby-colors{font-size:10px}}
+
+/* Scout diagnostics: no pairing, status of real BLE advertisement reception. */
+.scout-diagnostic{display:flex;align-items:center;gap:10px;color:#e7dcfb;font-size:13px;font-weight:700;line-height:1.5}
+.scout-diagnostic input{width:19px;height:19px;accent-color:#a98bea;flex-shrink:0}
+.scout-diagnostic:has(input:disabled){opacity:.55}
+.scout-traffic{font-size:12px;color:#c9f0eb;background:#254255;border:1px solid #547786;border-radius:12px;padding:11px;margin:10px 0}

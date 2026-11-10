@@ -11,6 +11,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.location.LocationManager;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -174,18 +176,40 @@ public class MainActivity extends Activity {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void startScout() {
-        if (fireworks.isActive()) { scout.message("Stop the light show before scanning."); return; }
-        if (!hasScanPermission()) {
-            if (Build.VERSION.SDK_INT >= 31)
+    private boolean scoutShowAll;
+
+    private boolean legacyLocationEnabled() {
+        if (Build.VERSION.SDK_INT >= 31) return true;
+        try {
+            if (Build.VERSION.SDK_INT >= 28) {
+                LocationManager lm=(LocationManager)getSystemService(LOCATION_SERVICE);
+                return lm!=null && lm.isLocationEnabled();
+            }
+            return Settings.Secure.getInt(getContentResolver(),
+                Settings.Secure.LOCATION_MODE,
+                Settings.Secure.LOCATION_MODE_OFF)!=Settings.Secure.LOCATION_MODE_OFF;
+        } catch(Exception ignored){return false;}
+    }
+
+    private void startScout(boolean showAll) {
+        scoutShowAll=showAll;
+        if(fireworks.isActive()){
+            scout.message("Stop the light show before scanning.");return;
+        }
+        if(!hasScanPermission()){
+            if(Build.VERSION.SDK_INT>=31)
                 requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_CONNECT}, SCOUT_REQUEST);
             else
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, SCOUT_REQUEST);
-            scout.message("Allow scan permission, then tap Scan again. No pairing is performed.");
+            scout.message("Grant scan permission; scanning will start automatically. No pairing.");
             return;
         }
-        scout.start();
+        if(!legacyLocationEnabled()){
+            scout.message("Android 6–11 requires device Location to be ON for BLE scanning. GlowQuest never records location.");
+            return;
+        }
+        scout.start(showAll);
     }
 
     private static byte[] parseHex(String raw) {
@@ -243,7 +267,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String fireworksStatus() {
             return fireworks.snapshot();
         }
-        @JavascriptInterface public void scanBands() { mainHandler.post(MainActivity.this::startScout); }
+        @JavascriptInterface public void scanBands(boolean allDevices) {
+            mainHandler.post(() -> MainActivity.this.startScout(allDevices));
+        }
+        @JavascriptInterface public void clearScanBands() {
+            mainHandler.post(scout::clear);
+        }
         @JavascriptInterface public void stopScanBands() {
             mainHandler.post(() -> scout.stop("Scanning stopped. No pairing was performed."));
         }
@@ -252,7 +281,11 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {
         super.onRequestPermissionsResult(code, perms, result);
         if (code == NEARBY_REQUEST) notifyUi();
-        if (code == SCOUT_REQUEST) notifyScout();
+        if (code == SCOUT_REQUEST) {
+            if (hasScanPermission()) startScout(scoutShowAll);
+            else scout.message("Scan permission was not granted. Allow Nearby devices (or Location on Android 11 and earlier).");
+            notifyScout();
+        }
     }
 
     @Override public void onActivityResult(int code, int result, Intent data) {

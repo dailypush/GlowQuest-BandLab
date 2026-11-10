@@ -61,12 +61,11 @@ Feature: GlowQuest kid-friendly interactions
     When I press Send Magic
     Then the mock radio gets "E100E90500250E35B2" for company 387
 
-  Scenario: Feedback is a locally saved human observation
+  Scenario: Retired feedback controls are removed without disrupting effects
     Given GlowQuest is open on a simulated Android phone
+    Then the effect feedback and history controls are absent
     When I press Send Magic
-    Then the feedback prompt appears
-    When I mark the effect as working
-    Then the result is saved locally
+    Then the mock radio gets "E100E90500090E02B0" for company 387
 
   Scenario: Studio offers a center-safe LED spotlight and gentle vibration mode
     Given GlowQuest is open on a simulated Android phone
@@ -139,3 +138,18 @@ Feature: GlowQuest kid-friendly interactions
     And I launch the walk-by demonstration
     Then the native sequencer receives the yellow orange white sweep
     And the show explains that it does not target individual watches
+
+
+  Scenario: Scan diagnostics also expose anonymous BLE devices and traffic counts
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I enable all BLE diagnostics
+    And I scan for unpaired watches
+    Then the scanner shows received packets and a generic BLE device
+
+  Scenario: Clearing scan data also clears native state
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I scan for unpaired watches
+    And I clear the scan results
+    Then the scan counts and device list are cleared

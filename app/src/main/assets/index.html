@@ -96,12 +96,6 @@
         <p class="fx-estimate" id="fxEstimate" aria-live="polite"></p>
         <p class="small-desc">The center LED cannot be isolated with this spotlight command; use <b>Mix → Five lights</b> to paint it independently. Never-on/persistent timing is intentionally disabled.</p>
         <button id="fxReset" type="button" class="soft-btn">↺ Gentle defaults</button>
-        <div class="fx-history">
-          <div class="fx-history-head"><h3>📒 My effect experiments</h3><span id="fxHistoryCount">0 saved</span></div>
-          <p id="fxHistoryEmpty">After you send an effect, tell GlowQuest whether it worked. Results stay on this phone.</p>
-          <ul id="fxHistoryItems"></ul>
-          <button class="text-button" id="fxClearNotes" type="button">Clear local experiment history</button>
-        </div>
       </section>
             <section class="firework-panel" id="fireworksCreator" hidden aria-label="Fireworks Show Creator">
         <div class="firework-header"><h3>🎆 Fireworks Show Creator</h3><span class="firework-pill">60 sec</span></div>
@@ -162,40 +156,34 @@
     </section>
 
     <section class="page" id="page-scout">
-      <div class="section-head"><div><div class="kicker">EXPERIMENTAL BAND LAB</div><h2>Band Scout <span>📡</span></h2>
-        <p>Explore your three unpaired watches. This uses local Bluetooth scanning only—no pairing, account, connection, or command writing.</p></div></div>
+      <div class="section-head"><div><div class="kicker">EXPERIMENTAL BLE LAB</div><h2>Band Scout <span>📡</span></h2>
+        <p>Check whether your Android phone can hear nearby Bluetooth advertisements. No phone pairing or Disney app required.</p></div></div>
       <div class="scout-panel">
-        <h3>🔭 Discover nearby watch candidates</h3>
-        <p>Turn on one watch at a time and tap Scan. Some bands only advertise the FE03 service or their name in certain modes, so not seeing one does not mean it cannot receive GlowQuest effects.</p>
+        <h3>🔭 Bluetooth signal explorer</h3>
+        <p>Scan near one watch at a time. We check MagicBand-like names, FE03, and Disney manufacturer data; some unpaired bands may never advertise these clues.</p>
+        <label class="scout-diagnostic"><input type="checkbox" id="scoutDiagnostic"> Show all nearby BLE devices (diagnostic mode)</label>
+        <p class="small-desc">Diagnostic mode also lists unidentified Bluetooth devices so you can confirm the scanner hears anything at all. Nothing is saved or shared.</p>
         <div class="scout-actions">
-          <button id="scoutStart" type="button" class="soft-btn">📡 Scan for 12 seconds</button>
+          <button id="scoutStart" type="button" class="soft-btn">📡 Scan for 20 seconds</button>
           <button id="scoutStop" type="button" class="soft-btn" disabled>⏹ Stop scanning</button>
         </div>
         <div class="scout-status" role="status" aria-live="polite"><span id="scoutState">Ready to scan</span><b id="scoutCount">0 candidate(s)</b></div>
-        <p class="small-desc">FE03 is shared with other Alexa gadgets. A discovered name or Bluetooth address does not prove a serial number or stable identity. Device addresses may rotate.</p>
-        <p id="scoutEmpty">No watch candidates recorded yet. No pairing is performed.</p>
+        <p class="scout-traffic" id="scoutTraffic">0 advertisements received · 0 distinct BLE device(s)</p>
+        <p id="scoutEmpty">No BLE advertisements received yet.</p>
         <div id="scoutDevices" class="scout-devices"></div>
-        <button id="scoutReset" type="button" class="text-button">Clear scan list</button>
+        <button id="scoutReset" type="button" class="text-button">Clear scan results</button>
+        <p class="small-desc">Android 12+ needs Nearby devices permission. Android 6–11 also needs device Location enabled and scan location permission; GlowQuest never reads or saves your location.</p>
       </div>
       <div class="scout-panel">
-        <h3>🔴 Odd / 🔵 Even serial challenge</h3>
-        <p>Enter a <b>known serial number</b> under each candidate to preview its assigned color: last numerical digit even = blue, odd = red. The four-character suffix in a Bluetooth name is <b>not</b> a verified serial.</p>
-        <p class="hint">⚠️ <b>Preview only:</b> Band Scout does not send a different color to each watch. Our existing broadcast commands still reach all nearby compatible bands. Individual targeting would require a separately verified unpaired communication method.</p>
+        <h3>🔴 Odd / 🔵 Even serial preview</h3>
+        <p>When a watch candidate appears, enter its <b>known</b> serial to preview a color: even last numeric digit = blue, odd = red. Bluetooth addresses and names are not verified serials.</p>
+        <p class="hint">⚠️ Band Scout does not read confirmed serials, pair, or send individually addressed commands. Nearby watches may all respond to normal GlowQuest broadcasts.</p>
       </div>
     </section>
-  </main>
+      </main>
 </div>
 <div class="bottom-area"><div class="bottom-inner"><button id="offBtn" type="button" class="off-button" aria-label="Send lights off">🌙<small>Lights off</small></button><button id="sendBtn" type="button" class="main-button"><span id="sendIcon">✨</span><span id="sendText">SEND MAGIC!</span></button><button id="stopBtn" type="button" class="stop-button" aria-label="Stop transmitting">⏹<small>Stop signal</small></button></div></div>
 
-<section class="fx-feedback" id="fxFeedback" hidden aria-labelledby="fxFeedbackTitle" role="region">
-  <div class="fx-feedback-top"><strong id="fxFeedbackTitle">Did the MagicBand+ respond?</strong><button id="fxFeedbackSkip" type="button" aria-label="Dismiss effect feedback">✕</button></div>
-  <p id="fxFeedbackName">Watch your band, then choose what happened.</p>
-  <div class="fx-feedback-actions">
-    <button type="button" data-fx-outcome="worked">✅ Worked!</button>
-    <button type="button" data-fx-outcome="different">✨ Different</button>
-    <button type="button" data-fx-outcome="none">❌ No response</button>
-  </div>
-  <small>Only your observation is saved locally. Bluetooth broadcasting cannot confirm delivery.</small>
-</section>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body></html>

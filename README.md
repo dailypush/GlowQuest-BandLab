@@ -3,6 +3,15 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## GlowQuest 2.3.1 — Cleaner effects and better Band Scout diagnostics
+
+- Removed the “Did it work?” feedback prompt, feedback history and UI. The obsolete local feedback key is cleared when FX Studio loads.
+- **Band Scout now listens to all BLE advertisements for 20 seconds**, whether or not they advertise a MagicBand+ name or FE03 service.
+- Real-time diagnostics distinguish received radio advertisements and distinct nearby BLE devices from *possible* MagicBand+ candidates. Optional **Show all nearby BLE devices** displays up to 24 generic devices in addition to up to 12 candidates (read-only, no pairing or transmissions).
+- Manufacturer data with ID `0x0183` is another candidate hint, **not proof** that a device is a MagicBand+. Addresses can rotate, and serials cannot be verified by a passive scan.
+- Android permission requests resume scanning once granted. On Android 6–11 the app reports when system Location is off (required by Android BLE scanning APIs). No location data is read/stored/uploaded.
+- **Important:** If nearby BLE devices are visible but no MagicBand+ is identified, scanning is working; your unpaired MagicBand+ may be a *receiver only* in its current operating mode. This app still cannot individually address watches.
+
 ## GlowQuest 2.3 — Fireworks Show Creator
 
 **New:** Shows → 🎆 Show Creator provides a native-scheduled 60-second show of **12 editable effects spaced 5 seconds apart**, with vivid colors, built-in animation commands and several vibration patterns. Customize effect type, color, LED mask and vibration per cue; save/load a show in local storage. The Android main-thread scheduler holds each radio advertisement to **1 second per cue**, plus an optional **500 ms wake ping** on the first cue. It does not advertise continuously for 60 seconds.
@@ -30,7 +39,7 @@ Protocol background: [EMCOT MagicBand+ Bluetooth Codes](https://emcot.world/Disn
 
 This builds an **E9 05 manufacturer advertisement** with its timing byte, mask+color byte and vibration nibble. It deliberately never enables the persistent/always-on flag. The phone itself still transmits only a short advertisement burst, **not** a continuous radio signal. Estimated LED effect duration is distinct from broadcast duration; some short settings can cause a double flash on certain firmware.
 
-There is also a new **“Did the band respond?”** prompt after sending a command. It saves **your observation**, not an automatic success acknowledgment, entirely on your phone. Open FX Studio to see recent results and clear them with two taps. Uninstalling the app can erase this local data.
+The previous “Did it work?” response prompt and effect-feedback history were removed in **v2.3.1**. The rest of FX Studio is unchanged.
 
 Compatibility of individual LED masks, vibration patterns and fade timing **must be checked on a real MagicBand+**, since the protocol is community reverse-engineered. Center-only spotlights require a different command; **Mix → Five lights** remains the way to customize the center LED. See [EMCOT's timing, mask, vibration reference](https://emcot.world/Disney_MagicBand%2B_Bluetooth_Codes).
 
