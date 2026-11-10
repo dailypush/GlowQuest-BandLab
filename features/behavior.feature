@@ -100,3 +100,42 @@ Feature: GlowQuest kid-friendly interactions
     And I scan for unpaired watches
     And I enter serials with even and odd final digits
     Then the first watch previews blue and the second previews red
+
+
+  Scenario: Fireworks Show Creator displays a fully editable sixty-second timeline
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    Then I see twelve timed firework cues
+    And the show explains that it does not target individual watches
+
+  Scenario: Fireworks launches timed dramatic light and vibration cues
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I launch the 60-second fireworks show
+    Then the mock native sequencer gets a 12-cue dramatic show with multiple vibrations
+
+  Scenario: Fireworks cancellation removes the pending show
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I launch the 60-second fireworks show
+    And I cancel the running show
+    Then the native cancellation is requested and the show becomes idle
+
+  Scenario: Edited firework timelines can be saved and restored locally
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I edit the second cue to be a blue double vibration
+    And I save then restore my firework timeline
+    Then the second cue is restored as blue with double vibration
+
+  Scenario: Walk-by color demonstration uses the known colors and no individual targeting
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I launch the walk-by demonstration
+    Then the native sequencer receives the yellow orange white sweep
+    And the show explains that it does not target individual watches

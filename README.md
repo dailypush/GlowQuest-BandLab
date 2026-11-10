@@ -3,6 +3,16 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## GlowQuest 2.3 — Fireworks Show Creator
+
+**New:** Shows → 🎆 Show Creator provides a native-scheduled 60-second show of **12 editable effects spaced 5 seconds apart**, with vivid colors, built-in animation commands and several vibration patterns. Customize effect type, color, LED mask and vibration per cue; save/load a show in local storage. The Android main-thread scheduler holds each radio advertisement to **1 second per cue**, plus an optional **500 ms wake ping** on the first cue. It does not advertise continuously for 60 seconds.
+
+**Safety:** Cancelling the show removes all scheduled cues, stops the current advertisement and requests the documented Lights Off command. The show automatically finishes at 60 seconds and sends Lights Off. Leaving the app foreground cancels the show. Sending a regular effect interrupts the show. Lights Off and the global Stop button both cancel any running show. Actual band feedback is not an authenticated acknowledgment; hardware timing/firmware can vary.
+
+**Walk-by Glow (experimental demo):** Inside Show Creator, try a **15-second fixed sweep**: yellow → orange → white, with short vibration patterns. This is intentionally **not** RSSI-triggered walking detection. It does **not** individually target new unpaired bands. All compatible bands within broadcast range can see the same colors. Reliable individual device control remains under investigation.
+
+Avoid testing intense flashing around people sensitive to flashing lights. This app is intended for experiments with your own watches away from guests and runs offline.
+
 ## GlowQuest 2.2 beta — Band Scout and extended timing
 
 **New in 2.2:**

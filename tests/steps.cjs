@@ -13,7 +13,7 @@ let server, appUrl;
 BeforeAll(async function () {
   server = createServer(async (req, res) => {
     const file = (req.url || '/').split('?')[0].slice(1) || 'index.html';
-    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','scout.js':'application/javascript','app.css':'text/css'};
+    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','scout.js':'application/javascript','fireworks.js':'application/javascript','app.css':'text/css'};
     if (!Object.prototype.hasOwnProperty.call(mime,file)) { res.writeHead(404).end(); return; }
     try {
       const body = await readFile(join(assets,file));
@@ -32,11 +32,34 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0,scans:0};
+    window.__glowMock={sent:[],stops:0,scans:0,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
-      stop:()=>{window.__glowMock.stops++},
+      stop:()=>{
+        window.__glowMock.stops++;
+        window.__glowMock.fireworks.active=false;
+      },
+      startFireworks:(raw)=>{
+        const data=JSON.parse(raw);
+        window.__glowMock.shows.push({kind:"fireworks",cues:data.cues});
+        window.__glowMock.fireworks={active:true,kind:"fireworks",step:1,
+          remainingSeconds:60,total:12,status:"Fireworks started"};
+        window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
+      },
+      startWalkBy:()=>{
+        window.__glowMock.shows.push({kind:"walkby",colors:[16,19,27]});
+        window.__glowMock.fireworks={active:true,kind:"walkby",step:1,
+          remainingSeconds:15,total:3,status:"Approach: yellow"};
+        window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
+      },
+      cancelFireworks:()=>{
+        window.__glowMock.cancels++;
+        window.__glowMock.fireworks={active:false,kind:"",step:0,
+          remainingSeconds:0,total:0,status:"Cancelled — lights off requested"};
+        window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
+      },
+      fireworksStatus:()=>JSON.stringify(window.__glowMock.fireworks),
       scanBands:()=>{
         window.__glowMock.scans++;
         window.onScoutStatus(JSON.stringify({scanning:false,status:'Mock scan finished',
@@ -220,4 +243,62 @@ Then('the first watch previews blue and the second previews red', async function
   assert.match(await this.page.locator('.scout-parity').nth(0).innerText(),/BLUE preview/);
   assert.match(await this.page.locator('.scout-parity').nth(1).innerText(),/RED preview/);
   assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
+});
+
+
+When('I open the Fireworks Show Creator',async function () {
+  await this.page.locator('[data-show="fireworks"]').click();
+  assert.ok(await this.page.locator('#fireworksCreator').isVisible());
+});
+Then('I see twelve timed firework cues',async function () {
+  assert.equal(await this.page.locator('.firework-cue').count(),12);
+  assert.match(await this.page.locator('#fireworkSummary').innerText(),/every 5 seconds/);
+});
+When('I launch the 60-second fireworks show',async function () {
+  await this.page.locator('#fireworkStart').click();
+});
+Then('the mock native sequencer gets a 12-cue dramatic show with multiple vibrations',async function () {
+  const calls=await this.page.evaluate(()=>window.__glowMock.shows);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].kind,'fireworks');
+  assert.equal(calls[0].cues.length,12);
+  assert.ok(calls[0].cues.filter(c=>c.vibration>0).length>=5);
+  assert.ok(calls[0].cues.filter(c=>c.effect!=='color').length>=4);
+  assert.equal(await this.page.locator('#fireworkStart').isDisabled(),true);
+});
+When('I cancel the running show',async function () {
+  await this.page.locator('#fireworkCancel').click();
+});
+Then('the native cancellation is requested and the show becomes idle',async function () {
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.cancels),1);
+  assert.equal(await this.page.locator('#fireworkStart').isDisabled(),false);
+  assert.equal(await this.page.locator('#fireworkCancel').isDisabled(),true);
+});
+When('I edit the second cue to be a blue double vibration',async function () {
+  await this.page.getByLabel('Cue 2 effect').selectOption('color');
+  await this.page.getByLabel('Cue 2 color').selectOption('2');
+  await this.page.getByLabel('Cue 2 vibration').selectOption('2');
+});
+When('I save then restore my firework timeline',async function () {
+  await this.page.locator('#fireworkSave').click();
+  await this.page.locator('#fireworkReset').click();
+  await this.page.locator('#fireworkLoad').click();
+});
+Then('the second cue is restored as blue with double vibration',async function () {
+  assert.equal(await this.page.getByLabel('Cue 2 color').inputValue(),'2');
+  assert.equal(await this.page.getByLabel('Cue 2 vibration').inputValue(),'2');
+});
+When('I launch the walk-by demonstration',async function () {
+  await this.page.locator('#walkbyStart').click();
+});
+Then('the native sequencer receives the yellow orange white sweep',async function () {
+  const calls=await this.page.evaluate(()=>window.__glowMock.shows);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].kind,'walkby');
+  assert.deepEqual(calls[0].colors,[16,19,27]);
+  assert.match(await this.page.locator('#walkbyStatus').innerText(),/Approach: yellow/);
+});
+Then('the show explains that it does not target individual watches',async function () {
+  assert.match(await this.page.locator('#fireworksCreator').innerText(),/not live proximity sensing/i);
+  assert.match(await this.page.locator('#fireworksCreator').innerText(),/all nearby compatible watches/i);
 });

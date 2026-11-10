@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private BleEngine engine;
     private BandScout scout;
+    private FireworksShow fireworks;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -39,6 +40,7 @@ public class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(0);
         engine = new BleEngine(this, this::notifyUi);
         scout = new BandScout(this, this::notifyScout);
+        fireworks = new FireworksShow(engine, this::notifyFireworks);
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(14, 11, 37));
         WebSettings s = web.getSettings();
@@ -58,7 +60,8 @@ public class MainActivity extends Activity {
                     "file:///android_asset/app.css".equals(url) ||
                     "file:///android_asset/app.js".equals(url) ||
                     "file:///android_asset/fx.js".equals(url) ||
-                    "file:///android_asset/scout.js".equals(url);
+                    "file:///android_asset/scout.js".equals(url) ||
+                    "file:///android_asset/fireworks.js".equals(url);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !allowed(request.getUrl().toString());
@@ -130,6 +133,31 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void notifyFireworks() {
+        mainHandler.post(() -> {
+            if (web != null) web.evaluateJavascript(
+                "window.onFireworksStatus && window.onFireworksStatus(" +
+                JSONObject.quote(fireworks.snapshot()) + ")", null);
+        });
+    }
+
+    private void startFireworks(String cues, boolean walkby) {
+        if (!hasPermission()) {
+            fireworks.message("Allow Nearby devices before starting a show");
+            setupBluetooth();
+            return;
+        }
+        BluetoothAdapter bt = adapter();
+        if (bt == null || !bt.isEnabled() || !bt.isMultipleAdvertisementSupported()) {
+            fireworks.message("Enable a BLE advertising-capable Bluetooth radio first");
+            setupBluetooth();
+            return;
+        }
+        scout.stop("Scan stopped for foreground light show.");
+        if (walkby) fireworks.startWalkBy();
+        else fireworks.startFireworks(cues);
+    }
+
     private void notifyScout() {
         mainHandler.post(() -> {
             if (web != null) {
@@ -147,6 +175,7 @@ public class MainActivity extends Activity {
     }
 
     private void startScout() {
+        if (fireworks.isActive()) { scout.message("Stop the light show before scanning."); return; }
         if (!hasScanPermission()) {
             if (Build.VERSION.SDK_INT >= 31)
                 requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
@@ -183,6 +212,7 @@ public class MainActivity extends Activity {
                     byte[] bytes = parseHex(raw);
                     if (ms < 350 || ms > 3500) throw new IllegalArgumentException("Broadcast must be 0.35–3.5 seconds");
                     if (!hasPermission()) { engine.message("Allow Nearby devices to send a signal"); setupBluetooth(); return; }
+                    fireworks.cancel(false, "Manual color replaced show");
                     engine.send(companyId, bytes, ms, wake);
                 } catch (Exception e) { engine.message(e.getMessage()); }
                 notifyUi();
@@ -191,10 +221,28 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void off() {
             mainHandler.post(() -> {
                 if (!hasPermission()) { setupBluetooth(); return; }
+                fireworks.cancel(false, "Lights off");
                 engine.send(0x0183, parseHex("E100E90500090E1DB0"), 1200, false);
             });
         }
-        @JavascriptInterface public void stop() { mainHandler.post(() -> engine.stop("Transmission stopped")); }
+        @JavascriptInterface public void stop() {
+            mainHandler.post(() -> {
+                if (fireworks.isActive()) fireworks.cancel(true,"Cancelled — lights off requested");
+                else engine.stop("Transmission stopped");
+            });
+        }
+        @JavascriptInterface public void startFireworks(String json) {
+            mainHandler.post(() -> startFireworks(json,false));
+        }
+        @JavascriptInterface public void startWalkBy() {
+            mainHandler.post(() -> startFireworks(null,true));
+        }
+        @JavascriptInterface public void cancelFireworks() {
+            mainHandler.post(() -> fireworks.cancel(true,"Cancelled — lights off requested"));
+        }
+        @JavascriptInterface public String fireworksStatus() {
+            return fireworks.snapshot();
+        }
         @JavascriptInterface public void scanBands() { mainHandler.post(MainActivity.this::startScout); }
         @JavascriptInterface public void stopScanBands() {
             mainHandler.post(() -> scout.stop("Scanning stopped. No pairing was performed."));
@@ -215,13 +263,15 @@ public class MainActivity extends Activity {
     @Override protected void onPause() {
         super.onPause();
         // Never leave the phone broadcasting if the child leaves the app.
+        fireworks.cancel(false,"Sequence stopped because app left foreground");
         engine.stop("Ready to play");
         scout.stop("Scanner stopped when app left the foreground.");
     }
 
-    @Override protected void onResume() { super.onResume(); notifyUi(); notifyScout(); }
+    @Override protected void onResume() { super.onResume(); notifyUi(); notifyScout(); notifyFireworks(); }
 
     @Override protected void onDestroy() {
+        fireworks.cancel(false,"Sequence stopped");
         engine.stop("Stopped");
         scout.stop("Stopped");
         if (web != null) {

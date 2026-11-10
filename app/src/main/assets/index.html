@@ -6,6 +6,7 @@
 <script defer src="app.js"></script>
 <script defer src="fx.js"></script>
 <script defer src="scout.js"></script>
+<script defer src="fireworks.js"></script>
 </head><body>
 <div class="cosmos"><i></i><i></i><i></i><i></i><i></i></div>
 <div class="app-shell">
@@ -64,7 +65,7 @@
 
     <section class="page" id="page-shows">
       <div class="section-head"><div><div class="kicker">ADVENTURE 03</div><h2>Light show time <span>🎆</span></h2><p>Real community-researched MagicBand+ command patterns. Try each one!</p></div></div>
-      <div class="show-filter" id="showFilters"><button class="active" data-show="all" type="button">All</button><button data-show="show" type="button">✨ Shows</button><button data-show="fade" type="button">🌅 Fades</button><button data-show="animation" type="button">🌀 Animations</button><button data-show="studio" type="button">🧪 FX Studio</button></div>
+      <div class="show-filter" id="showFilters"><button class="active" data-show="all" type="button">All</button><button data-show="show" type="button">✨ Shows</button><button data-show="fade" type="button">🌅 Fades</button><button data-show="animation" type="button">🌀 Animations</button><button data-show="studio" type="button">🧪 FX Studio</button><button data-show="fireworks" type="button">🎆 Show Creator</button></div>
       <div class="show-grid" id="showGrid"></div>
       <section class="studio-panel" id="fxStudio" hidden aria-label="Custom light and vibration effects">
         <h3>🧪 Build your own band effect</h3>
@@ -101,6 +102,38 @@
           <ul id="fxHistoryItems"></ul>
           <button class="text-button" id="fxClearNotes" type="button">Clear local experiment history</button>
         </div>
+      </section>
+            <section class="firework-panel" id="fireworksCreator" hidden aria-label="Fireworks Show Creator">
+        <div class="firework-header"><h3>🎆 Fireworks Show Creator</h3><span class="firework-pill">60 sec</span></div>
+        <p>Create a dramatic timeline of twelve colorful cues and multiple vibrations, one every five seconds. Effects on the band may overlap or take time to register.</p>
+        <div class="firework-live" role="status" aria-live="polite">
+          <div class="firework-live-label"><strong id="fireworkStatus">Ready for launch</strong><span id="fireworkCountdown">60s total</span></div>
+          <progress id="fireworkProgress" max="60" value="0"></progress>
+        </div>
+        <div class="firework-buttons">
+          <button class="soft-btn" id="fireworkStart" type="button">🎇 Start 60-second fireworks</button>
+          <button class="soft-btn firework-stop" id="fireworkCancel" type="button" disabled>⏹ Cancel and lights off</button>
+        </div>
+        <p id="fireworkSummary" class="small-desc">12 colorful effects and multiple vibrations</p>
+        <div id="fireworkCues" class="firework-cues"></div>
+        <div class="firework-buttons firework-secondary">
+          <button class="soft-btn" id="fireworkSave" type="button">💾 Save timeline</button>
+          <button class="soft-btn" id="fireworkLoad" type="button">↺ Load saved</button>
+          <button class="soft-btn" id="fireworkReset" type="button">✨ Dramatic defaults</button>
+        </div>
+        <div class="walkby-panel">
+          <h3>🚶 Doppler-inspired Walk-by Glow</h3>
+          <p>Test the color story you imagined: <b>yellow while approaching</b>, <b>orange as you pass</b>, then <b>white moving away</b>, with two vibration bursts.</p>
+          <div class="walkby-colors"><span>🟡 Approach</span><span>🟠 Passing</span><span>⚪ Away</span></div>
+          <progress id="walkbyProgress" max="15" value="0"></progress>
+          <p id="walkbyStatus" role="status" aria-live="polite">Ready for the sweep</p>
+          <div class="firework-buttons">
+            <button class="soft-btn" id="walkbyStart" type="button">🚶 Play 15-second walk-by demo</button>
+            <button class="soft-btn firework-stop" id="walkbyCancel" type="button" disabled>⏹ Cancel demo</button>
+          </div>
+          <p class="small-desc"><b>Demonstration, not live proximity sensing:</b> this is a timed color sweep, not automatic distance tracking. All nearby compatible watches may receive the same broadcasts. Individual watch targeting would require separately verified unpaired communication.</p>
+        </div>
+        <p class="small-desc">Use only with your own bands, away from other guests. Stop cancels remaining cues and requests Lights Off. Auto-stops after 60 seconds; no background broadcasting. Avoid intense flashes around photosensitive people.</p>
       </section>
       <div class="hint"><span>⚠️</span> Some show effects can continue for several seconds after the phone stops sending. Tap <b>Lights off</b> to send the cancel color.</div>
     </section>

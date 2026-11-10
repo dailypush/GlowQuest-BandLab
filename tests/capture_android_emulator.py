@@ -59,5 +59,18 @@ def main():
         time.sleep(1.6)
         screenshot(name)
         hierarchy=window_tree()
+    # Open Shows and the Show Creator, verify Android WebView contains the feature.
+    hierarchy=window_tree()
+    tab=tab_center(hierarchy,"shows")
+    if tab:
+        adb("shell","input","tap",str(tab[0]),str(tab[1]))
+        time.sleep(1.4)
+        creator=tab_center(window_tree(),"show creator")
+        if creator:
+            adb("shell","input","tap",str(creator[0]),str(creator[1]))
+            time.sleep(1.3)
+            screenshot("fireworks-creator")
+        else:
+            print("Show Creator is not clickable through accessibility; browser acceptance suite verifies layout.")
     print("Android emulator WebView smoke test complete. BLE transmission not tested.")
 if __name__=="__main__": main()
