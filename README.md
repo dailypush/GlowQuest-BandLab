@@ -65,6 +65,14 @@ npm run test:ui
 
 Results are written to `reports/` (ignored locally). These automated tests **do not prove that the phone's Bluetooth controller can transmit**, that the real MagicBand+ receives commands, or that the app behaves identically in every Android WebView. Those require physical-device testing. The browser uses a mocked native Bluetooth bridge. Android SDK compilation is separately verified in the APK build job.
 
+### Visual regression + Android emulator screenshots
+
+The same workflow now also checks **six visual snapshots**: the Colors, Mix, Shows, Quest, and Learn pages, plus the Colors page at tablet size. `tests/visual-baselines.json` stores compact color fingerprints and reference dimensions derived from reviewed CI screenshots. `tests/check_visual_regression.py` compares the new captures, fails the UI job for unexpected broad layout changes, and writes diagnostic heatmaps to `reports/visual-diffs/`. This is a **coarse visual regression check**, not pixel-perfect screenshot testing; small typography shifts may not be detected.
+
+After Gherkin and visual tests pass, CI builds the Android debug APK. An additional Android emulator job installs that APK on an Android 15 emulator and captures images from the **real Android WebView**; these are published as the `GlowQuest-Android-emulator-screenshots` artifact. Emulator screenshots are distinct from browser screenshots, and neither test verifies real BLE transmission, a physical MagicBand+ response, or production devices.
+
+To view the screenshots: **GitHub → Actions → Build GlowQuest Android APK → latest run → Artifacts**. Look for `GlowQuest-UI-screenshots`, `GlowQuest-Android-emulator-screenshots`, `GlowQuest-Gherkin-reports`, and (when a visual change is detected) `GlowQuest-visual-diffs`. The APK artifact is `GlowQuest-debug-APK`. Reference fingerprints should be updated only after visually reviewing and approving intended design changes.
+
 ## How to use
 
 1. Charge your MagicBand+ and make sure it is powered on.
