@@ -232,10 +232,10 @@ public class MainActivity extends Activity {
             });
         }
         @JavascriptInterface public void startFireworks(String json) {
-            mainHandler.post(() -> startFireworks(json,false));
+            mainHandler.post(() -> MainActivity.this.startFireworks(json,false));
         }
         @JavascriptInterface public void startWalkBy() {
-            mainHandler.post(() -> startFireworks(null,true));
+            mainHandler.post(() -> MainActivity.this.startFireworks(null,true));
         }
         @JavascriptInterface public void cancelFireworks() {
             mainHandler.post(() -> fireworks.cancel(true,"Cancelled — lights off requested"));
