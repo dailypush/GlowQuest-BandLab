@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="app.css">
 <script defer src="app.js"></script>
 <script defer src="fx.js"></script>
+<script defer src="scout.js"></script>
 </head><body>
 <div class="cosmos"><i></i><i></i><i></i><i></i><i></i></div>
 <div class="app-shell">
@@ -42,6 +43,7 @@
     <button type="button" class="tab" data-page="shows"><span>🎆</span> Shows</button>
     <button type="button" class="tab" data-page="quest"><span>🏆</span> Quest</button>
     <button type="button" class="tab" data-page="learn"><span>🔎</span> Learn</button>
+    <button type="button" class="tab" data-page="scout"><span>📡</span> Scout</button>
   </nav>
 
   <main>
@@ -81,6 +83,9 @@
           <label>Band light duration<select id="fxTime" aria-label="Band effect time">
             <option value="1">Short (~8 s)</option><option value="5" selected>Medium (~14 s)</option>
             <option value="9">Long (~20 s)</option><option value="14">Extra long (~28 s)</option>
+            <option value="extended-8">Extended ~30 s</option>
+            <option value="extended-13">45-second mode (~45.8 s)</option>
+            <option value="extended-15">Maximum timed ~52 s</option>
           </select></label>
           <label>Fade out<select id="fxFade" aria-label="Fade-out duration">
             <option value="0">None</option><option value="1" selected>~1 second</option>
@@ -120,7 +125,30 @@
         <button id="sendRaw" class="soft-btn wide" type="button">🧪 Send test packet</button>
         <button id="lockLab" class="text-button" type="button">Lock lab</button>
       </div></div>
-      <p class="fineprint">GlowQuest is an independent educational project, not affiliated with or endorsed by Disney. Effect compatibility varies by firmware and radio hardware. No NFC passes, accounts, location, internet or tracking are used.</p>
+      <p class="fineprint">GlowQuest is an independent educational project, not affiliated with or endorsed by Disney. Effect compatibility varies by firmware and radio hardware. No NFC passes, accounts, internet or tracking are used. On Android 11 and earlier, scan-only discovery requires a location permission; no location is saved or sent.</p>
+    </section>
+
+    <section class="page" id="page-scout">
+      <div class="section-head"><div><div class="kicker">EXPERIMENTAL BAND LAB</div><h2>Band Scout <span>📡</span></h2>
+        <p>Explore your three unpaired watches. This uses local Bluetooth scanning only—no pairing, account, connection, or command writing.</p></div></div>
+      <div class="scout-panel">
+        <h3>🔭 Discover nearby watch candidates</h3>
+        <p>Turn on one watch at a time and tap Scan. Some bands only advertise the FE03 service or their name in certain modes, so not seeing one does not mean it cannot receive GlowQuest effects.</p>
+        <div class="scout-actions">
+          <button id="scoutStart" type="button" class="soft-btn">📡 Scan for 12 seconds</button>
+          <button id="scoutStop" type="button" class="soft-btn" disabled>⏹ Stop scanning</button>
+        </div>
+        <div class="scout-status" role="status" aria-live="polite"><span id="scoutState">Ready to scan</span><b id="scoutCount">0 candidate(s)</b></div>
+        <p class="small-desc">FE03 is shared with other Alexa gadgets. A discovered name or Bluetooth address does not prove a serial number or stable identity. Device addresses may rotate.</p>
+        <p id="scoutEmpty">No watch candidates recorded yet. No pairing is performed.</p>
+        <div id="scoutDevices" class="scout-devices"></div>
+        <button id="scoutReset" type="button" class="text-button">Clear scan list</button>
+      </div>
+      <div class="scout-panel">
+        <h3>🔴 Odd / 🔵 Even serial challenge</h3>
+        <p>Enter a <b>known serial number</b> under each candidate to preview its assigned color: last numerical digit even = blue, odd = red. The four-character suffix in a Bluetooth name is <b>not</b> a verified serial.</p>
+        <p class="hint">⚠️ <b>Preview only:</b> Band Scout does not send a different color to each watch. Our existing broadcast commands still reach all nearby compatible bands. Individual targeting would require a separately verified unpaired communication method.</p>
+      </div>
     </section>
   </main>
 </div>

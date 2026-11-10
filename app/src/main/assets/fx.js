@@ -31,11 +31,13 @@
     const color = readNum('fxColor');
     const mask = readNum('fxMask');
     const vibe = readNum('fxVibration');
-    const time = readNum('fxTime');
+    const selectedTime = ui('fxTime').value;
+    const extended = selectedTime.startsWith('extended-');
+    const time = extended ? Number(selectedTime.slice(9)) : Number(selectedTime);
     const fade = readNum('fxFade');
-    // Timing: bit 7 (persistent) deliberately never set, bit 6 = 0.
-    // Bits 5-4: fade (0..3), bits 3-0: on-time (0..15).
-    const timing = (fade << 4) | time;
+    // Timing: bit 7 (persistent) ALWAYS 0. Bit 6 switches to extended scaler.
+    // Bits 5-4: fade 0..3s; bits 3-0: time value 0..15.
+    const timing = (extended ? 0x40 : 0) | (fade << 4) | time;
     const maskAndColor = (mask << 5) | (color & 31);
     const hex = 'E100E90500' + h(timing) + '0E' + h(maskAndColor) + h(0xB0 | vibe);
     const colorHex = PALETTE[color][1];
@@ -44,7 +46,7 @@
     const description = PALETTE[color][0] + ' • ' + labels[mask] +
       (vibe ? ' • ' + ui('fxVibration').selectedOptions[0].textContent : '');
     select({name:description,emoji:'🧪',hex,wake:true,kind:'studio',colors:preview});
-    const approximate = (6.5 + 1.5 * time).toFixed(1);
+    const approximate = (extended ? 5.5 + 3.1 * time : 6.5 + 1.5 * time).toFixed(1);
     ui('fxEstimate').textContent = 'Estimated band effect: ~' + approximate + ' seconds, plus ~' +
       fade + 's fade. Actual results may differ; short values may blink instead. ' +
       'Phone broadcasting remains limited to a short burst.';

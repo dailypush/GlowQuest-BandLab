@@ -40,13 +40,13 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name GlowQuest-debug-APK --dir release
           test -s release/app-debug.apk
-          mv release/app-debug.apk release/GlowQuest-BandLab-v2.1.0-beta.1.apk
-          sha256sum release/GlowQuest-BandLab-v2.1.0-beta.1.apk | tee release/SHA256SUMS.txt
+          mv release/app-debug.apk release/GlowQuest-BandLab-v2.2.0-beta.1.apk
+          sha256sum release/GlowQuest-BandLab-v2.2.0-beta.1.apk | tee release/SHA256SUMS.txt
 
       - name: Publish beta release (only once for this version)
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: v2.1.0-beta.1
+          RELEASE_TAG: v2.2.0-beta.1
           SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha || '1e1e9086b28b34bdbf74dce0cfc0d627674b7f11' }}
         shell: bash
         run: |
@@ -57,17 +57,20 @@ jobs:
           fi
 
           cat > release/RELEASE_NOTES.md <<'NOTES'
-          # GlowQuest — Band Lab 2.1 (Beta 1)
+          # GlowQuest — Band Lab 2.2 (Beta 1)
 
           **Sideloadable Android APK for MagicBand+ experiments.**
 
           This early-access build includes the colorful kid-friendly interface,
           25 colors, mixing tools, Color Detective and Effect Studio with outer
-          LED spotlights, vibration patterns, band effect timing/fade options,
-          plus a local "Did it work?" experiment history.
+          LED spotlights, vibration, approximate 45-second extended timing/fade,
+          a local effect history, and the new scan-only Band Scout tab.
+
+          Scout does not pair, bond or individually address bands. A manual
+          serial odd/even color assignment is a preview, not a direct command.
 
           **How to install on your Android phone**
-          1. Download the `GlowQuest-BandLab-v2.1.0-beta.1.apk` asset below.
+          1. Download the `GlowQuest-BandLab-v2.2.0-beta.1.apk` asset below.
           2. Open it from Files/Downloads and allow installation from that source if prompted.
           3. Launch GlowQuest, enable Bluetooth and grant Nearby devices permission.
           4. Try with your own MagicBand+ away from other guests.
@@ -80,15 +83,17 @@ jobs:
           - Automated Gherkin, screenshot, and Android emulator tests passed,
             but MagicBand+ radio responses still need physical-device validation.
           - BLE advertisements are broadcasts: nearby bands can receive them.
+          - Scout discovers candidate FE03 advertisements only. It cannot read
+            authenticated serials or command three bands separately.
           - Not affiliated with or endorsed by Disney.
           NOTES
 
           gh release create "$RELEASE_TAG" \
-            "release/GlowQuest-BandLab-v2.1.0-beta.1.apk" \
+            "release/GlowQuest-BandLab-v2.2.0-beta.1.apk" \
             "release/SHA256SUMS.txt" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$SOURCE_COMMIT" \
-            --title "GlowQuest Band Lab v2.1.0 — Beta 1" \
+            --title "GlowQuest Band Lab v2.2.0 — Beta 1" \
             --notes-file release/RELEASE_NOTES.md \
             --prerelease
 

@@ -25,10 +25,12 @@ import java.io.ByteArrayInputStream;
 public class MainActivity extends Activity {
     private static final int NEARBY_REQUEST = 240;
     private static final int ENABLE_REQUEST = 241;
+    private static final int SCOUT_REQUEST = 242;
     private static final String HOME = "file:///android_asset/index.html";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView web;
     private BleEngine engine;
+    private BandScout scout;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -36,6 +38,7 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.rgb(14, 11, 37));
         getWindow().getDecorView().setSystemUiVisibility(0);
         engine = new BleEngine(this, this::notifyUi);
+        scout = new BandScout(this, this::notifyScout);
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(14, 11, 37));
         WebSettings s = web.getSettings();
@@ -54,7 +57,8 @@ public class MainActivity extends Activity {
                 return HOME.equals(url) ||
                     "file:///android_asset/app.css".equals(url) ||
                     "file:///android_asset/app.js".equals(url) ||
-                    "file:///android_asset/fx.js".equals(url);
+                    "file:///android_asset/fx.js".equals(url) ||
+                    "file:///android_asset/scout.js".equals(url);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !allowed(request.getUrl().toString());
@@ -126,6 +130,35 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void notifyScout() {
+        mainHandler.post(() -> {
+            if (web != null) {
+                web.evaluateJavascript("window.onScoutStatus && window.onScoutStatus(" +
+                    JSONObject.quote(scout.snapshot()) + ")", null);
+            }
+        });
+    }
+
+    private boolean hasScanPermission() {
+        if (Build.VERSION.SDK_INT >= 31)
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void startScout() {
+        if (!hasScanPermission()) {
+            if (Build.VERSION.SDK_INT >= 31)
+                requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT}, SCOUT_REQUEST);
+            else
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, SCOUT_REQUEST);
+            scout.message("Allow scan permission, then tap Scan again. No pairing is performed.");
+            return;
+        }
+        scout.start();
+    }
+
     private static byte[] parseHex(String raw) {
         if (raw == null) throw new IllegalArgumentException("Missing HEX payload");
         String hex = raw.replaceAll("[\\s:-]", "").toUpperCase(java.util.Locale.ROOT);
@@ -162,11 +195,16 @@ public class MainActivity extends Activity {
             });
         }
         @JavascriptInterface public void stop() { mainHandler.post(() -> engine.stop("Transmission stopped")); }
+        @JavascriptInterface public void scanBands() { mainHandler.post(MainActivity.this::startScout); }
+        @JavascriptInterface public void stopScanBands() {
+            mainHandler.post(() -> scout.stop("Scanning stopped. No pairing was performed."));
+        }
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {
         super.onRequestPermissionsResult(code, perms, result);
         if (code == NEARBY_REQUEST) notifyUi();
+        if (code == SCOUT_REQUEST) notifyScout();
     }
 
     @Override public void onActivityResult(int code, int result, Intent data) {
@@ -178,12 +216,14 @@ public class MainActivity extends Activity {
         super.onPause();
         // Never leave the phone broadcasting if the child leaves the app.
         engine.stop("Ready to play");
+        scout.stop("Scanner stopped when app left the foreground.");
     }
 
-    @Override protected void onResume() { super.onResume(); notifyUi(); }
+    @Override protected void onResume() { super.onResume(); notifyUi(); notifyScout(); }
 
     @Override protected void onDestroy() {
         engine.stop("Stopped");
+        scout.stop("Stopped");
         if (web != null) {
             web.removeJavascriptInterface("BandNative");
             web.destroy();

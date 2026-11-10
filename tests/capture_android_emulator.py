@@ -50,10 +50,10 @@ def main():
     match=re.search(r"(\d+)x(\d+)",display)
     if not match: raise RuntimeError("Unknown emulator size: "+display)
     width=int(match.group(1))
-    for i,name in enumerate(("mix","shows","quest","learn"),start=1):
+    for i,name in enumerate(("mix","shows","quest","learn","scout"),start=1):
         center=tab_center(hierarchy,name)
         if center is None:
-            center=(int(width*(i+.5)/5),int(width*1.44))
+            center=(int(width*(i+.5)/6),int(width*1.44))
             print("Fallback tab coordinates for",name,center)
         adb("shell","input","tap",str(center[0]),str(center[1]))
         time.sleep(1.6)

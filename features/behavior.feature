@@ -75,3 +75,28 @@ Feature: GlowQuest kid-friendly interactions
     And I turn vibration off
     Then the FX Studio has no center-only spotlight option
     And the effect packet never enables persistent lighting
+
+
+  Scenario: Extended timing sends an approximately 45 second command in a short radio burst
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Effect Studio
+    And I choose the 45-second effect mode
+    Then the displayed duration is approximately 45 seconds
+    And the packet contains "E100E905005D0E02B0"
+    And the effect packet never enables persistent lighting
+    When I press Send Magic
+    Then the mock radio gets "E100E905005D0E02B0" for company 387
+
+  Scenario: Scout discovers two unpaired candidate watches without transmitting
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I scan for unpaired watches
+    Then two candidate watches appear without pairing
+
+  Scenario: Known serial parity previews independent colors without pretending to control watches
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I scan for unpaired watches
+    And I enter serials with even and odd final digits
+    Then the first watch previews blue and the second previews red

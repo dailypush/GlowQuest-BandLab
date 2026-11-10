@@ -13,7 +13,7 @@ let server, appUrl;
 BeforeAll(async function () {
   server = createServer(async (req, res) => {
     const file = (req.url || '/').split('?')[0].slice(1) || 'index.html';
-    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','app.css':'text/css'};
+    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','scout.js':'application/javascript','app.css':'text/css'};
     if (!Object.prototype.hasOwnProperty.call(mime,file)) { res.writeHead(404).end(); return; }
     try {
       const body = await readFile(join(assets,file));
@@ -32,11 +32,20 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0};
+    window.__glowMock={sent:[],stops:0,scans:0};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
       stop:()=>{window.__glowMock.stops++},
+      scanBands:()=>{
+        window.__glowMock.scans++;
+        window.onScoutStatus(JSON.stringify({scanning:false,status:'Mock scan finished',
+          devices:[
+            {id:'A',label:'MagicBand+ TEST-A',nameMatch:true,fe03:true,rssi:-43,addressHint:'AA:01',serial:null},
+            {id:'B',label:'MagicBand+ TEST-B',nameMatch:true,fe03:true,rssi:-54,addressHint:'AA:02',serial:null}
+          ]}));
+      },
+      stopScanBands:()=>{},
       off:()=>{},enable:()=>{}
     };
   });
@@ -184,4 +193,31 @@ When('I turn vibration off',async function () {
 Then('the FX Studio has no center-only spotlight option',async function () {
   assert.equal(await this.page.locator('#fxMask option').count(),5);
   assert.ok(!(await this.page.locator('#fxMask').innerText()).includes('Center'));
+});
+
+
+When('I choose the 45-second effect mode', async function () {
+  await this.page.locator('#fxTime').selectOption('extended-13');
+});
+Then('the displayed duration is approximately 45 seconds', async function () {
+  const val=await this.page.locator('#fxEstimate').innerText();
+  assert.match(val,/45\.8 seconds/);
+});
+When('I scan for unpaired watches', async function () {
+  await this.page.locator('#scoutStart').click();
+});
+Then('two candidate watches appear without pairing', async function () {
+  assert.equal(await this.page.locator('.scout-device').count(),2);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.scans),1);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
+  assert.match(await this.page.locator('.scout-device').first().innerText(),/Serial not verified/);
+});
+When('I enter serials with even and odd final digits', async function () {
+  await this.page.locator('.scout-device input').nth(0).fill('ABC1234');
+  await this.page.locator('.scout-device input').nth(1).fill('ABC1235');
+});
+Then('the first watch previews blue and the second previews red', async function () {
+  assert.match(await this.page.locator('.scout-parity').nth(0).innerText(),/BLUE preview/);
+  assert.match(await this.page.locator('.scout-parity').nth(1).innerText(),/RED preview/);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
 });

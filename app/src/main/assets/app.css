@@ -27,3 +27,26 @@
 .fx-feedback small{display:block;font-size:10px;color:#c8b4ed;margin-top:10px}
 @media(min-width:570px){.fx-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.fx-controls label:last-child{grid-column:auto}}
 @media(max-width:350px){.fx-controls{grid-template-columns:1fr}.fx-controls label:last-child{grid-column:auto}.fx-feedback-actions{gap:4px}.fx-feedback-actions button{font-size:10px}}
+
+/* v2.2: new sixth tab, Band Scout local scan-only dashboard */
+.tabs{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}
+.tab{padding:10px 0;font-size:9px;min-width:0}
+.tab span{font-size:20px}
+.scout-panel{padding:17px;background:#211b48;border:1px solid #6a5798;border-radius:20px;margin:15px 0}
+.scout-panel h3{font-size:17px;margin:0 0 8px;color:#edd7ff}
+.scout-panel p{line-height:1.6}
+.scout-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.scout-actions button{flex:1;min-width:135px;margin:0}
+.scout-actions button:disabled{opacity:.46}
+.scout-status{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#312659;padding:12px;border-radius:12px;margin:12px 0;color:#dbd2fa;font-size:11px}
+.scout-status span{flex:1}
+.scout-status b{white-space:nowrap}
+.scout-device{display:flex;flex-direction:column;gap:9px;background:#2c2353;padding:13px;border:1px solid #6e5a9d;border-radius:15px;margin:12px 0}
+.scout-device strong{font-size:13px;overflow-wrap:anywhere}
+.scout-device small{font-size:11px;color:#d3c2ec;line-height:1.4;overflow-wrap:anywhere}
+.scout-device label{display:flex;flex-direction:column;gap:6px;font-size:11px;color:#e7dbfb}
+.scout-device input{width:100%;padding:11px;border-radius:12px;border:1px solid #a696c8;background:#18132d;color:white;font-size:13px}
+.scout-parity{border-radius:12px;padding:9px;font-size:12px;background:#373150;font-weight:800}
+.scout-parity[data-color=blue]{background:#133b7d;color:#c5e0ff}
+.scout-parity[data-color=red]{background:#66223f;color:#ffc8d2}
+#scoutEmpty[hidden]{display:none}

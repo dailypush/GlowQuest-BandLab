@@ -3,6 +3,17 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## GlowQuest 2.2 beta — Band Scout and extended timing
+
+**New in 2.2:**
+- **Shows → FX Studio → 45-second mode**: selects the documented E905 extended timing scaler bit (0x40) with time value 13, giving approximately **45.8 seconds** of band illumination (plus up to three seconds fade). A ~30 s and ~52 s option are also included. The Android BLE *broadcast itself* remains brief (1.8 seconds, plus optional short wake ping). The bit-7 always-on flag is never enabled.
+- **Scout tab**: opt-in 12-second BLE scan looking for MagicBand+ names or advertisements with the FE03 service, displaying candidate devices, RSSI and a shortened transient Bluetooth address. **No Bluetooth pairing, bonding, GATT connections, or writes** occur. FE03 is shared by other Alexa gadgets, so matches are not definitive. Some bands may be invisible in their normal operating mode. Candidates are not stored.
+- **Odd/even challenge preview**: optionally type a *known* serial number under a scan candidate; last numeric digit even previews blue, odd previews red. Advertised name suffixes and MAC addresses are **not verified serial numbers**. This preview **does not send individually addressed commands**; existing radio broadcasts still affect compatible nearby bands.
+
+**Permissions and privacy:** Android 12+ requests Nearby devices / Bluetooth scan permission. Android 6–11 requires fine-location permission to perform BLE scans under Android OS rules; this app has no internet permission and does not collect, store, or transmit location data. We don't automatically pair watches or request Disney login.
+
+Protocol background: [EMCOT MagicBand+ Bluetooth Codes](https://emcot.world/Disney_MagicBand%2B_Bluetooth_Codes) and [MagicBand+ FE03 research](https://emcot.world/Magicband%2B_Pairing_Details). A genuinely separate-watch mode requires verified per-band communication and is **not yet implemented**.
+
 ## GlowQuest 2.1 beta — Effect Studio
 
 **New in 2.1:** Open **Shows → 🧪 FX Studio** to combine a chosen palette color with a documented outer-LED mask (all, top-right, bottom-right, bottom-left, top-left), a vibration pattern (off/single/double/triple/flutter/long buzz), estimated band duration and 0–3 second fade.
@@ -22,7 +33,7 @@ Compatibility of individual LED masks, vibration patterns and fade timing **must
 - **🔎 Learn:** illustrated explanations, live HEX packet magnifier, and a quiz.
 - **🧑‍🔬 Grown-up lab:** press-and-hold to unlock custom company IDs, raw HEX, short-duration choices and optional wake-up ping. This is only an accidental-touch guard, not a secure parental lock.
 - **🌙 Lights off:** transmits the documented OFF command; **⏹ Stop signal** ends phone broadcasting without necessarily stopping a show already running in the band.
-- **Offline & private:** no internet or location permissions, no account, no server, no data collection. The whole UI is bundled in the APK; no Chrome, bridge service or other app is necessary.
+- **Offline & private:** no internet, no account, no server, no data collection. Scout scanning requires a runtime Nearby devices permission on newer Android, or a runtime location permission on Android 6–11. The whole UI is bundled in the APK; no Chrome, bridge service or other app is necessary.
 - **Kid safety:** broadcasts are non-connectable and end automatically after at most 3.5 seconds (plus optional 0.5-second wake ping). The radio stops when the app is backgrounded. No looping or continuous spam modes. Effects in the band may last longer than the brief transmission, so use the Off button.
 
 ## Compatibility
