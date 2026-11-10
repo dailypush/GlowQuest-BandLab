@@ -44,6 +44,27 @@ Alternative for a phone connected to Android Studio: press **Run** for automatic
 
 **Note, as of November 2026:** Google has begun rolling out Android developer verification in select markets, with broader requirements planned in 2027. Unregistered APKs may require Android's advanced installation flow or ADB in affected circumstances. See https://developer.android.com/developer-verification for current requirements. Don't disable unrelated security controls.
 
+## Automated Gherkin acceptance tests and screenshots
+
+Every push touching the app, CI configuration or tests (and every pull request touching them) runs a **Gherkin/Cucumber + Playwright** job before building the APK. The suite runs the **same bundled HTML/CSS/JavaScript as the Android WebView**, at phone and tablet viewport sizes, while mocking the native BLE bridge. That makes it safe to validate UI interactions without radio hardware.
+
+It tests the five adventure screens, phone/tablet horizontal overflow, color-packet construction, five-LED mixing, show filtering, color detective, the science quiz, invalid hex rejection, the stop button, and the calls made to the Android bridge. It also records mobile and tablet screenshots, plus failure screenshots automatically.
+
+**To review a build:** open GitHub **Actions → Build GlowQuest Android APK → latest run → Artifacts**. Download:
+- **GlowQuest-UI-screenshots** — full-page PNG screenshots for the five adventures and tablet layout, plus failing scenarios if any.
+- **GlowQuest-Gherkin-reports** — interactive HTML report plus JSON for automation and debugging.
+- **GlowQuest-debug-APK** — sideloadable debug APK, created *only after the acceptance job passes*.
+
+Run locally (requires Node.js and Chromium/Playwright):
+
+```sh
+npm install
+npx playwright install chromium
+npm run test:ui
+```
+
+Results are written to `reports/` (ignored locally). These automated tests **do not prove that the phone's Bluetooth controller can transmit**, that the real MagicBand+ receives commands, or that the app behaves identically in every Android WebView. Those require physical-device testing. The browser uses a mocked native Bluetooth bridge. Android SDK compilation is separately verified in the APK build job.
+
 ## How to use
 
 1. Charge your MagicBand+ and make sure it is powered on.
@@ -82,4 +103,4 @@ Effects and builders were independently adapted from documented community resear
 
 - Tested HTML, JS syntax and page interactions in a desktop headless Chromium preview.
 - Inspected preset payloads for legacy advertising size limits and validated Android manifest XML.
-- **The APK has not been compiled here; no physical Android BLE hardware is attached to this environment.** Actual transmission and wristband responses require on-device verification. The provided GitHub workflow builds a sideloadable debug APK from source.
+- **GitHub Actions compiles the Android debug APK after the browser-based acceptance tests pass.** No physical Android BLE hardware is attached to the automated CI runner, so real wristband responses still require on-device verification.
