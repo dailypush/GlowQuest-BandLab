@@ -2,9 +2,9 @@ name: Build GlowQuest Android APK
 on:
   workflow_dispatch:
   pull_request:
-    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
+    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', '.github/workflows/publish-beta-release.yml', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
   push:
-    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
+    paths: ['.github/workflows/build-apk.yml', 'app/**', 'features/**', 'tests/**', '.github/workflows/publish-beta-release.yml', 'package.json', 'build.gradle', 'settings.gradle', 'gradle.properties']
 permissions:
   contents: read
 jobs:
