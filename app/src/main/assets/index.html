@@ -135,13 +135,53 @@
           <h3>🚶 Doppler-inspired Walk-by Glow</h3>
           <p>Test the color story you imagined: <b>yellow while approaching</b>, <b>orange as you pass</b>, then <b>white moving away</b>, with two vibration bursts.</p>
           <div class="walkby-colors"><span>🟡 Approach</span><span>🟠 Passing</span><span>⚪ Away</span></div>
+          <div class="range-lab" id="rangeLab" aria-label="Bluetooth Range Lab">
+            <h3>📶 Range Lab · Radio power</h3>
+            <p>Test how far each color broadcast reaches. Android offers four <b>requested</b> transmission-power levels. These are not measured distances, and your phone may not provide four distinct ranges.</p>
+            <div class="range-stages">
+              <div class="range-stage">
+                <label for="rangePower0">🟡 Yellow — approaching</label>
+                <select id="rangePower0" aria-label="Yellow transmission power">
+                  <option value="0">Ultra Low</option>
+                  <option value="1">Low</option>
+                  <option value="2">Medium</option>
+                  <option value="3" selected>High</option>
+                </select>
+                <button id="rangeTest0" class="soft-btn" type="button">Test yellow power</button>
+              </div>
+              <div class="range-stage">
+                <label for="rangePower1">🟠 Orange — passing</label>
+                <select id="rangePower1" aria-label="Orange transmission power">
+                  <option value="0">Ultra Low</option>
+                  <option value="1" selected>Low</option>
+                  <option value="2">Medium</option>
+                  <option value="3">High</option>
+                </select>
+                <button id="rangeTest1" class="soft-btn" type="button">Test orange power</button>
+              </div>
+              <div class="range-stage">
+                <label for="rangePower2">⚪ White — moving away</label>
+                <select id="rangePower2" aria-label="White transmission power">
+                  <option value="0" selected>Ultra Low</option>
+                  <option value="1">Low</option>
+                  <option value="2">Medium</option>
+                  <option value="3">High</option>
+                </select>
+                <button id="rangeTest2" class="soft-btn" type="button">Test white power</button>
+              </div>
+            </div>
+            <p class="range-summary" id="rangePowerSummary" aria-live="polite">Yellow High → Orange Low → White Ultra Low</p>
+            <p id="rangeLabStatus" role="status" aria-live="polite">Place your three watches at different distances and test one color at a time.</p>
+            <button id="rangeReset" class="text-button" type="button">Restore default power levels</button>
+            <p class="small-desc"><b>Not distance sensing:</b> GlowQuest does not locate or individually address watches. Every compatible watch within radio range may respond. BLE power is an estimate, not a precise range cutoff. Your settings stay on this phone; no pairing or scanning is required. Test only with your own watches away from other guests.</p>
+          </div>
           <progress id="walkbyProgress" max="15" value="0"></progress>
           <p id="walkbyStatus" role="status" aria-live="polite">Ready for the sweep</p>
           <div class="firework-buttons">
-            <button class="soft-btn" id="walkbyStart" type="button">🚶 Play 15-second walk-by demo</button>
+            <button class="soft-btn" id="walkbyStart" type="button">🚶 Play 15-second power sweep</button>
             <button class="soft-btn firework-stop" id="walkbyCancel" type="button" disabled>⏹ Cancel demo</button>
           </div>
-          <p class="small-desc"><b>Demonstration, not live proximity sensing:</b> this is a timed color sweep, not automatic distance tracking. All nearby compatible watches may receive the same broadcasts. Individual watch targeting would require separately verified unpaired communication.</p>
+          <p class="small-desc"><b>Demonstration, not live proximity sensing:</b> this is a timed color and radio-power sweep, not automatic distance tracking. All nearby compatible watches may receive the same broadcasts. Individual watch targeting would require separately verified unpaired communication.</p>
         </div>
         <p class="small-desc">Use only with your own bands, away from other guests. Stop cancels remaining cues and requests Lights Off. Auto-stops after the selected duration; no background broadcasting. Avoid intense flashes around photosensitive people.</p>
       </section>
