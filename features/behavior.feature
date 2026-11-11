@@ -189,3 +189,30 @@ Feature: GlowQuest kid-friendly interactions
     And I open the Fireworks Show Creator
     And I customize the first firework cue to seven seconds
     Then the cue timeline shows the updated custom duration
+
+
+  Scenario: Range Lab shows separate yellow orange white radio power controls
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I open the Range Lab
+    Then I see yellow orange and white power controls with conservative defaults
+    And the Range Lab explains the lack of distance sensing
+
+  Scenario: A manual Range Lab test sends its selected power through the Android bridge
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I set yellow to low power and test it
+    Then the Android bridge receives the low-power yellow test
+    When I restore the default Range Lab profile
+    Then yellow high orange low and white ultra-low are restored
+
+  Scenario: Timed Walk-by Glow uses independently configured radio power per stage
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I choose ultra-low yellow medium orange and high white
+    And I launch the walk-by demonstration
+    Then the native sweep receives the independent radio power settings
+    And the native sequencer receives the yellow orange white sweep
