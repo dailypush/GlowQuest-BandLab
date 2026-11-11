@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Install Cucumber and Playwright
         run: npm install --no-audit --no-fund
       - name: Install Chromium
@@ -33,15 +33,23 @@ jobs:
           /tmp/glowquest-visual/bin/python tests/check_visual_regression.py
       - name: Upload visual regression heatmaps
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GlowQuest-visual-diffs
           path: reports/visual-diffs/*.png
           if-no-files-found: ignore
           retention-days: 30
+      - name: Upload README previews
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GlowQuest-README-previews
+          path: reports/readme-previews/*.png
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload screenshots (including failures)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GlowQuest-UI-screenshots
           path: reports/screenshots/*.png
@@ -49,7 +57,7 @@ jobs:
           retention-days: 30
       - name: Upload Cucumber reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GlowQuest-Gherkin-reports
           path: |
@@ -80,8 +88,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
           java-version: '17'
@@ -95,13 +103,13 @@ jobs:
           test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '8.9'
       - name: Build sideloadable debug APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GlowQuest-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
@@ -113,9 +121,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Download the built APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.2
         with:
           name: GlowQuest-debug-APK
           path: reports/build-apk
@@ -125,7 +133,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Boot Android and capture app screens
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
           api-level: 35
           target: google_apis
@@ -136,9 +144,55 @@ jobs:
           script: python3 tests/capture_android_emulator.py reports/build-apk/app-debug.apk
       - name: Upload Android emulator screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GlowQuest-Android-emulator-screenshots
           path: reports/android-emulator/*.png
           if-no-files-found: warn
           retention-days: 30
+
+  publish-readme-screenshots:
+    name: Update README interface previews
+    needs: [ui-acceptance, emulator-screenshots]
+    # Never write assets from a PR or a fork; keep screenshot content from
+    # the fully tested main branch only.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Download screenshots from the tested UI run
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: GlowQuest-README-previews
+          path: reports/readme-previews
+      - name: Optimize stable README WebP screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/glowquest-doc-images
+          /tmp/glowquest-doc-images/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/glowquest-doc-images/bin/python tests/prepare_readme_images.py
+      - name: Commit updated screenshot gallery to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if [[ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]]; then
+            echo "Main advanced since this build; skipping outdated gallery."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/screenshots/
+          if git diff --cached --quiet; then
+            echo "README screenshots have not changed."
+          else
+            git commit -m 'docs: refresh generated interface screenshots [skip ci]'
+            git push origin HEAD:main
+            echo '## README gallery refreshed' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Optimized previews are committed in docs/screenshots/.' >> "$GITHUB_STEP_SUMMARY"
+          fi

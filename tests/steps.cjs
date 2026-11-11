@@ -7,6 +7,7 @@ const { BeforeAll, AfterAll, Before, After, Given, When, Then, Status, setDefaul
 const { chromium } = require('playwright');
 setDefaultTimeout(30000);
 const images = resolve('reports/screenshots');
+const readmePreviews = resolve('reports/readme-previews');
 const assets = resolve('app/src/main/assets');
 let server, appUrl;
 
@@ -418,4 +419,32 @@ Then('yellow high orange low and white ultra-low are restored', async function (
 Then('the Range Lab explains the lack of distance sensing', async function () {
   assert.match(await this.page.locator('#rangeLab').innerText(),/not distance sensing/i);
   assert.match(await this.page.locator('#rangeLab').innerText(),/Every compatible watch within radio range may respond/);
+});
+
+
+/** Stable viewport screenshots of the real bundled UI, with BLE bridge mocked. */
+Then('I capture the {string} README interface preview', async function (name) {
+  const locations = {
+    'colors': null,
+    'mix': null,
+    'scout': null,
+    'effect-studio': '#fxStudio',
+    'fireworks': '#fireworksCreator',
+    'range-lab': '#rangeLab'
+  };
+  assert.ok(Object.prototype.hasOwnProperty.call(locations,name),'Unknown README preview: '+name);
+  if (locations[name]) {
+    const panel = this.page.locator(locations[name]);
+    assert.ok(await panel.isVisible(),'Preview panel is not visible: '+name);
+    await panel.evaluate(node => node.scrollIntoView({block:'start',inline:'nearest'}));
+  } else {
+    await this.page.evaluate(()=>window.scrollTo(0,0));
+  }
+  await mkdir(readmePreviews,{recursive:true});
+  const shot=await this.page.screenshot({
+    path:join(readmePreviews,name+'.png'),
+    fullPage:false,
+    animations:'disabled'
+  });
+  assert.ok(shot.length>10000,'Unexpectedly empty preview: '+name);
 });

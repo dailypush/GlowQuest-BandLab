@@ -22,3 +22,42 @@ Feature: GlowQuest app screenshots
     When I switch to tablet size
     Then I save a "tablet-colors" screenshot
     And the screen fits without horizontal scrolling
+
+
+  @readme
+  Scenario: Capture the color palette for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    Then I capture the "colors" README interface preview
+
+  @readme
+  Scenario: Capture the light mixer for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Mix" adventure
+    Then I capture the "mix" README interface preview
+
+  @readme
+  Scenario: Capture Effect Studio for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Effect Studio
+    Then I capture the "effect-studio" README interface preview
+
+  @readme
+  Scenario: Capture Fireworks Show Creator for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    Then I capture the "fireworks" README interface preview
+
+  @readme
+  Scenario: Capture Range Lab for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    Then I capture the "range-lab" README interface preview
+
+  @readme
+  Scenario: Capture Band Scout for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    Then I capture the "scout" README interface preview

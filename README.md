@@ -3,6 +3,18 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## Interface screenshots
+
+The following screenshots are **automatically captured from GlowQuest's bundled interface** during successful GitHub Actions tests, with Bluetooth commands simulated. They show the app UI—not actual MagicBand+ hardware responses. The gallery is refreshed whenever the tested interface changes on `main`.
+
+| Colors | Light Mixer | Effect Studio |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/colors.webp" alt="GlowQuest mobile color palette" width="260"> | <img src="docs/screenshots/mix.webp" alt="GlowQuest custom LED mixer" width="260"> | <img src="docs/screenshots/effect-studio.webp" alt="GlowQuest lighting and vibration effect controls" width="260"> |
+| **Fireworks Creator** | **Walk-by Range Lab** | **Band Scout** |
+| <img src="docs/screenshots/fireworks.webp" alt="GlowQuest editable fireworks timeline" width="260"> | <img src="docs/screenshots/range-lab.webp" alt="GlowQuest Bluetooth transmission power controls" width="260"> | <img src="docs/screenshots/scout.webp" alt="GlowQuest Band Scout discovery diagnostics" width="260"> |
+
+[See how screenshots are generated](.github/workflows/build-apk.yml) · [View latest automated test artifacts](https://github.com/dailypush/GlowQuest-BandLab/actions/workflows/build-apk.yml)
+
 ## GlowQuest 2.4.0 — Bluetooth Range Lab
 
 **New:** Open **Shows → Show Creator → Walk-by Glow → Range Lab**. Select different Android BLE advertising transmit-power hints for each color: Ultra Low (0), Low (1), Medium (2), High (3). The default scripted sweep sends yellow at High, orange at Low and white at Ultra Low. You can change each setting, run a separate 1.8-second color test (with a short wake ping), then play the 15-second sweep. Both wake and effect commands use the selected power; other GlowQuest effects still default to Medium.
