@@ -153,3 +153,39 @@ Feature: GlowQuest kid-friendly interactions
     And I scan for unpaired watches
     And I clear the scan results
     Then the scan counts and device list are cleared
+
+
+  Scenario: Scout shows active scanning even without any packets
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I simulate a silent active BLE scan
+    Then the Scout screen clearly shows active scanning
+
+  Scenario: Scanner permissions are visible in the health panel
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    Then the Scout scanner health panel displays Android permissions
+
+  Scenario: Scout can produce a private diagnostic report without identifiers
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I enable all BLE diagnostics
+    And I scan for unpaired watches
+    And I copy the Scout diagnostic report
+    Then the report includes packet counts without Bluetooth identifiers
+
+  Scenario: Show duration preset sets all twelve cue lengths
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I choose a two minute fireworks show
+    Then each firework cue lasts ten seconds
+    When I launch the 60-second fireworks show
+    Then the Android show request includes per cue timing and wake setting
+
+  Scenario: Per cue duration can override an entire show preset
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Fireworks Show Creator
+    And I customize the first firework cue to seven seconds
+    Then the cue timeline shows the updated custom duration

@@ -70,3 +70,13 @@
 .scout-diagnostic input{width:19px;height:19px;accent-color:#a98bea;flex-shrink:0}
 .scout-diagnostic:has(input:disabled){opacity:.55}
 .scout-traffic{font-size:12px;color:#c9f0eb;background:#254255;border:1px solid #547786;border-radius:12px;padding:11px;margin:10px 0}
+
+.scout-health{margin:12px 0;padding:13px;border:1px solid #78669b;background:#2c2451;border-radius:14px;overflow-wrap:anywhere}
+.scout-health strong{font-size:13px}
+.scout-health p{font-size:11px;color:#eee1ff;line-height:1.6}
+.firework-options{padding:14px;background:#302655;border-radius:16px;border:1px solid #8563b4;margin:12px 0;display:flex;flex-direction:column;gap:10px}
+.firework-options label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:750}
+.firework-options select{background:#1f173a;color:#fff;border:1px solid #ab8bd7;padding:11px;border-radius:12px;width:100%}
+.firework-options .firework-wake{flex-direction:row;align-items:center;line-height:1.5}
+.firework-wake input{width:19px;height:19px}
+.firework-options p{font-size:11px;color:#e8daf7;margin:0}

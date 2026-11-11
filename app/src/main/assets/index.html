@@ -176,7 +176,7 @@
         <p>Check whether your Android phone can hear nearby Bluetooth advertisements. No phone pairing or Disney app required.</p></div></div>
       <div class="scout-panel">
         <h3>🔭 Bluetooth signal explorer</h3>
-        <p>Scan near one watch at a time. We check MagicBand-like names, FE03, and Disney manufacturer data; some unpaired bands may never advertise these clues.</p>
+        <p>For a discovery test, power on one watch and hold its rear button roughly three seconds until its lights pulse blue. Do not accept any pairing request. The app will scan without pairing.</p>
         <label class="scout-diagnostic"><input type="checkbox" id="scoutDiagnostic"> Show all nearby BLE devices (diagnostic mode)</label>
         <p class="small-desc">Diagnostic mode also lists unidentified Bluetooth devices so you can confirm the scanner hears anything at all. Nothing is saved or shared.</p>
         <div class="scout-actions">
@@ -185,6 +185,11 @@
         </div>
         <div class="scout-status" role="status" aria-live="polite"><span id="scoutState">Ready to scan</span><b id="scoutCount">0 candidate(s)</b></div>
         <p class="scout-traffic" id="scoutTraffic">0 advertisements received · 0 distinct BLE device(s)</p>
+        <div class="scout-health" aria-label="Android BLE scanner diagnostics">
+          <strong>🧪 Scanner health</strong>
+          <p id="scoutHealth" aria-live="polite">Checking Bluetooth permissions and scanner…</p>
+          <button id="scoutCopyReport" type="button" class="text-button">📋 Copy diagnostic report</button>
+        </div>
         <p id="scoutEmpty">No BLE advertisements received yet.</p>
         <div id="scoutDevices" class="scout-devices"></div>
         <button id="scoutReset" type="button" class="text-button">Clear scan results</button>
@@ -192,7 +197,7 @@
       </div>
       <div class="scout-panel">
         <h3>🔴 Odd / 🔵 Even serial preview</h3>
-        <p>When a watch candidate appears, enter its <b>known</b> serial to preview a color: even last numeric digit = blue, odd = red. Bluetooth addresses and names are not verified serials.</p>
+        <p>When a watch candidate appears, enter its <b>known</b> serial to preview a color: even last numeric digit = blue, odd = red. Bluetooth addresses and names are not verified serials. RSSI is only a rough proximity signal, not a measured distance.</p>
         <p class="hint">⚠️ Band Scout does not read confirmed serials, pair, or send individually addressed commands. Nearby watches may all respond to normal GlowQuest broadcasts.</p>
       </div>
     </section>

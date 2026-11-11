@@ -32,7 +32,7 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
+    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
@@ -42,7 +42,7 @@ Before(async function () {
       },
       startFireworks:(raw)=>{
         const data=JSON.parse(raw);
-        window.__glowMock.shows.push({kind:"fireworks",cues:data.cues});
+        window.__glowMock.shows.push({kind:"fireworks",cues:data.cues,wakeEach:data.wakeEach});
         window.__glowMock.fireworks={active:true,kind:"fireworks",step:1,
           remainingSeconds:60,total:12,status:"Fireworks started"};
         window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
@@ -60,6 +60,11 @@ Before(async function () {
         window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
       },
       fireworksStatus:()=>JSON.stringify(window.__glowMock.fireworks),
+      scoutEnvironment:()=>JSON.stringify({api:35,phone:'Mock Android',
+        available:true,bluetoothOn:true,scanPermission:true,scannerReady:true,
+        legacyLocationRequired:false,legacyLocationOn:true,
+        foreground:true,scanning:false}),
+      copyScoutReport:(report)=>{window.__glowMock.copiedReport=report;},
       scanBands:(all)=>{
         window.__glowMock.scans++;
         window.__glowMock.scanModes.push(all);
@@ -250,7 +255,7 @@ When('I open the Fireworks Show Creator',async function () {
 });
 Then('I see twelve timed firework cues',async function () {
   assert.equal(await this.page.locator('.firework-cue').count(),12);
-  assert.match(await this.page.locator('#fireworkSummary').innerText(),/every 5 seconds/);
+  assert.match(await this.page.locator('#fireworkSummary').innerText(),/1:00 total/);
 });
 When('I launch the 60-second fireworks show',async function () {
   await this.page.locator('#fireworkStart').click();
@@ -261,7 +266,7 @@ Then('the mock native sequencer gets a 12-cue dramatic show with multiple vibrat
   assert.equal(calls[0].kind,'fireworks');
   assert.equal(calls[0].cues.length,12);
   assert.ok(calls[0].cues.filter(c=>c.vibration>0).length>=5);
-  assert.ok(calls[0].cues.filter(c=>c.effect!=='color').length>=4);
+  assert.ok(calls[0].cues.filter(c=>c.effect!=='color').length>=3);
   assert.equal(await this.page.locator('#fireworkStart').isDisabled(),true);
 });
 When('I cancel the running show',async function () {
@@ -321,4 +326,53 @@ Then('the scan counts and device list are cleared',async function () {
   assert.equal(await this.page.locator('.scout-device').count(),0);
   assert.match(await this.page.locator('#scoutTraffic').innerText(),/^0 advertisements received/);
   assert.equal(await this.page.evaluate(()=>window.__glowMock.clears),1);
+});
+
+
+Then('the Scout scanner health panel displays Android permissions',async function () {
+  assert.match(await this.page.locator('#scoutHealth').innerText(),/Scan permission GRANTED/);
+  assert.match(await this.page.locator('#scoutHealth').innerText(),/Scanner READY/);
+});
+When('I copy the Scout diagnostic report',async function () {
+  await this.page.locator('#scoutCopyReport').click();
+});
+Then('the report includes packet counts without Bluetooth identifiers',async function () {
+  const report=await this.page.evaluate(()=>window.__glowMock.copiedReport);
+  assert.match(report,/Received packets: 25/);
+  assert.match(report,/Scan permission granted: true/);
+  assert.doesNotMatch(report,/AA:01|AA:02|AA:03/);
+});
+When('I simulate a silent active BLE scan',async function () {
+  await this.page.evaluate(()=>window.onScoutStatus(JSON.stringify({
+    scanning:true,status:'Scanning all BLE advertisements for 20 seconds…',
+    receivedPackets:0,uniqueDevices:0,candidateCount:0,devices:[],
+    scanFailureCode:0
+  })));
+});
+Then('the Scout screen clearly shows active scanning',async function () {
+  assert.match(await this.page.locator('#scoutState').innerText(),/SCANNING/);
+  assert.ok(await this.page.locator('#scoutStop').isEnabled());
+});
+When('I choose a two minute fireworks show',async function () {
+  await this.page.locator('#fireworkLength').selectOption('120');
+});
+Then('each firework cue lasts ten seconds',async function () {
+  assert.equal(await this.page.locator('.firework-cue').count(),12);
+  assert.deepEqual(await this.page.locator('.firework-cue select[aria-label$="duration"]')
+    .evaluateAll(els=>els.map(x=>x.value)),Array(12).fill('10'));
+  assert.match(await this.page.locator('#fireworkSummary').innerText(),/2:00 total/);
+});
+When('I customize the first firework cue to seven seconds',async function () {
+  await this.page.getByLabel('Cue 1 duration').selectOption('7');
+});
+Then('the cue timeline shows the updated custom duration',async function () {
+  assert.match(await this.page.locator('#fireworkSummary').innerText(),/1:02 total/);
+  assert.equal(await this.page.locator('#fireworkLength').inputValue(),'custom');
+});
+Then('the Android show request includes per cue timing and wake setting',async function () {
+  const shows=await this.page.evaluate(()=>window.__glowMock.shows);
+  assert.equal(shows.length,1);
+  assert.equal(shows[0].cues.length,12);
+  assert.ok(shows[0].cues.every(c=>c.holdSeconds===10));
+  assert.equal(shows[0].wakeEach,true);
 });

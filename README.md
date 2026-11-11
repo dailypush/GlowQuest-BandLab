@@ -3,6 +3,22 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## GlowQuest 2.3.2 — Scanner fixes and adjustable firework timings
+
+### Scanner
+
+The earlier Band Scout did not show a scan-in-progress indicator until an advertisement was actually received. This version reports scanning immediately, maps Android BLE scanner errors and adds an Android-only scanner health panel with radio/permission availability. A local **Copy diagnostic report** feature captures only the phone type, permission/radio state, packet counts and any error code—not other Bluetooth device identities. Android 12+ BLE scanning uses the Nearby devices permission with \`neverForLocation\`; Android 6–11 still needs Location enabled.
+
+To test if a MagicBand+ *advertises* (which differs from its ability to receive broadcasts), turn on one band and hold the rear button approximately three seconds until it pulses blue, then scan without pairing or accepting any pairing request. A band that only receives BLE broadcasts cannot report its distance to the phone.
+
+### Fireworks
+
+The 12-cue fireworks editor now supports total show presets **48s, 60s, 96s, 120s, 180s, 240s**, and lets you set each cue's dwell time between **4–20 seconds**. Each cue transmits for about 1.8 seconds (plus an optional 0.5-second wake signal). **Wake before every cue** is enabled by default because subsequent effects may be missed by some firmware. A new **Color-only reliability test** uses simpler manufacturer packets to isolate whether missed cues are due to built-in animation incompatibility. The app shows cue attempt counts and native radio status, but no BLE advertisement acknowledgment proves a band actually displayed an effect.
+
+The cue duration is the spacing between commands; a band's built-in animation may end earlier or persist past that spacing. The native foreground-only scheduler cancels pending cues on stop/exit, requests Lights Off when cancelled or after the sequence, and never enables persistent lighting.
+
+**Distance-based Walk-by concept:** Android can observe RSSI (rough radio proximity) only from watches that actively advertise. Our current Walk-by demo remains time-based, and radio broadcasts change all listening nearby bands. Individual-watch proximity triggering is not implemented, and precise distance cannot be guaranteed.
+
 ## GlowQuest 2.3.1 — Cleaner effects and better Band Scout diagnostics
 
 - Removed the “Did it work?” feedback prompt, feedback history and UI. The obsolete local feedback key is cleared when FX Studio loads.

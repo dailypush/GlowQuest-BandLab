@@ -6,7 +6,8 @@
   const el=id=>document.getElementById(id);
   const drafts=new Map();
   const state={scanning:false,status:'Ready to scan.',devices:[],
-    receivedPackets:0,uniqueDevices:0,candidateCount:0,showAll:false};
+    receivedPackets:0,uniqueDevices:0,candidateCount:0,showAll:false,scanFailureCode:0};
+  let environment=null;
   const serialColor=serial=>{
     const digits=String(serial||'').replace(/\D/g,'');
     if(!digits)return null;
@@ -15,7 +16,7 @@
   function redraw() {
     const list=el('scoutDevices');
     list.replaceChildren();
-    el('scoutState').textContent=state.status;
+    el('scoutState').textContent=(state.scanning?'🟢 SCANNING · ':'')+state.status;
     el('scoutCount').textContent=state.candidateCount+' candidate(s)';
     el('scoutTraffic').textContent=
       state.receivedPackets+' advertisements received · '+
@@ -78,6 +79,7 @@
     state.candidateCount=Number.isFinite(Number(data.candidateCount))?
       Number(data.candidateCount):state.devices.filter(d=>d.candidate).length;
     state.showAll=!!data.showAll;
+    state.scanFailureCode=Number(data.scanFailureCode)||0;
     redraw();
   }
   window.onScoutStatus=onScoutStatus;
@@ -87,7 +89,12 @@
       onScoutStatus({scanning:false,status:'Preview only — install the APK to scan.',
         devices:[],receivedPackets:0,uniqueDevices:0,candidateCount:0});return;
     }
+    state.scanning=true;
+    state.status='Scan requested — contacting Android Bluetooth scanner…';
+    state.receivedPackets=0;state.uniqueDevices=0;state.candidateCount=0;
+    state.devices=[];redraw();
     window.BandNative.scanBands(el('scoutDiagnostic').checked);
+    setTimeout(refreshHealth,350);
   });
   el('scoutStop').addEventListener('click',()=>{
     if(window.BandNative?.stopScanBands)window.BandNative.stopScanBands();
@@ -98,5 +105,57 @@
     else onScoutStatus({scanning:false,status:'Scan list cleared.',devices:[],
       receivedPackets:0,uniqueDevices:0,candidateCount:0});
   });
+  function refreshHealth(){
+    if(!window.BandNative?.scoutEnvironment){
+      el('scoutHealth').textContent='Scanner status requires the Android APK.';
+      return;
+    }
+    try{
+      environment=JSON.parse(window.BandNative.scoutEnvironment());
+      const s=environment;
+      el('scoutHealth').textContent=[
+        'Android API '+s.api+' · '+s.phone,
+        'Bluetooth '+(s.bluetoothOn?'ON':'OFF'),
+        'Scan permission '+(s.scanPermission?'GRANTED':'MISSING'),
+        'Scanner '+(s.scannerReady?'READY':'NOT READY'),
+        s.legacyLocationRequired?
+          'Device Location '+(s.legacyLocationOn?'ON':'OFF (required by older Android)'):
+          'Nearby devices permission (Android 12+)',
+        'App '+(s.foreground?'foreground':'background')
+      ].join(' · ');
+    }catch(error){el('scoutHealth').textContent='Could not read scanner health.';}
+  }
+  function report(){
+    const s=environment||{};
+    return [
+      'GlowQuest Scout diagnostic report — 2.3.2 beta',
+      'Android API: '+(s.api??'unknown'),
+      'Phone: '+(s.phone||'unknown'),
+      'Bluetooth on: '+(s.bluetoothOn??'unknown'),
+      'Scan permission granted: '+(s.scanPermission??'unknown'),
+      'Scanner ready: '+(s.scannerReady??'unknown'),
+      'Legacy Location on: '+(s.legacyLocationOn??'unknown'),
+      'App foreground: '+(s.foreground??'unknown'),
+      'Scan status: '+state.status,
+      'Scan error code: '+state.scanFailureCode,
+      'Received packets: '+state.receivedPackets,
+      'Distinct devices: '+state.uniqueDevices,
+      'Watch candidates: '+state.candidateCount,
+      'All-device mode: '+el('scoutDiagnostic').checked
+    ].join('\n');
+  }
+  el('scoutCopyReport').addEventListener('click',()=>{
+    refreshHealth();
+    if(window.BandNative?.copyScoutReport){
+      window.BandNative.copyScoutReport(report());
+      el('scoutCopyReport').textContent='✓ Diagnostic report copied';
+    }else{
+      el('scoutCopyReport').textContent='Only available in Android APK';
+    }
+  });
+  refreshHealth();
+  setInterval(()=>{
+    if(el('page-scout')?.classList.contains('active'))refreshHealth();
+  },2200);
   redraw();
 })();
