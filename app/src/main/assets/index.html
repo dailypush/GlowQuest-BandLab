@@ -98,14 +98,29 @@
         <button id="fxReset" type="button" class="soft-btn">↺ Gentle defaults</button>
       </section>
             <section class="firework-panel" id="fireworksCreator" hidden aria-label="Fireworks Show Creator">
-        <div class="firework-header"><h3>🎆 Fireworks Show Creator</h3><span class="firework-pill">60 sec</span></div>
-        <p>Create a dramatic timeline of twelve colorful cues and multiple vibrations, one every five seconds. Effects on the band may overlap or take time to register.</p>
+        <div class="firework-header"><h3>🎆 Fireworks Show Creator</h3><span class="firework-pill">Custom time</span></div>
+        <p>Create a timeline of twelve colorful effects with vibrations. Set the full show length or adjust each cue’s duration. Actual band animations may overlap; cue timing controls when the next signal is sent.</p>
+        <div class="firework-options">
+          <label>Entire show duration <select id="fireworkLength" aria-label="Total fireworks duration">
+            <option value="48">48 seconds (4s per cue)</option>
+            <option value="60" selected>60 seconds (5s per cue)</option>
+            <option value="96">1 minute 36 seconds (8s per cue)</option>
+            <option value="120">2 minutes (10s per cue)</option>
+            <option value="180">3 minutes (15s per cue)</option>
+            <option value="240">4 minutes (20s per cue)</option>
+            <option value="custom">Custom cue durations</option>
+          </select></label>
+          <label class="firework-wake"><input id="fireworkWakeEach" type="checkbox" checked> Wake band before every cue (recommended)</label>
+          <p>Each cue broadcasts for about 1.8 seconds, with a short wake ping when enabled. Choose 4–20 seconds per cue below. Built-in animations have their own hardware timing.</p>
+          <strong>Planned duration: <span id="fireworkPlanned">1:00</span></strong>
+        </div>
         <div class="firework-live" role="status" aria-live="polite">
           <div class="firework-live-label"><strong id="fireworkStatus">Ready for launch</strong><span id="fireworkCountdown">60s total</span></div>
           <progress id="fireworkProgress" max="60" value="0"></progress>
+          <p id="fireworkRadio" class="small-desc">Radio state appears here during playback.</p>
         </div>
         <div class="firework-buttons">
-          <button class="soft-btn" id="fireworkStart" type="button">🎇 Start 60-second fireworks</button>
+          <button class="soft-btn" id="fireworkStart" type="button">🎇 Start fireworks sequence</button>
           <button class="soft-btn firework-stop" id="fireworkCancel" type="button" disabled>⏹ Cancel and lights off</button>
         </div>
         <p id="fireworkSummary" class="small-desc">12 colorful effects and multiple vibrations</p>
@@ -114,6 +129,7 @@
           <button class="soft-btn" id="fireworkSave" type="button">💾 Save timeline</button>
           <button class="soft-btn" id="fireworkLoad" type="button">↺ Load saved</button>
           <button class="soft-btn" id="fireworkReset" type="button">✨ Dramatic defaults</button>
+          <button class="soft-btn" id="fireworkReliable" type="button">✅ Color-only reliability test</button>
         </div>
         <div class="walkby-panel">
           <h3>🚶 Doppler-inspired Walk-by Glow</h3>
@@ -127,7 +143,7 @@
           </div>
           <p class="small-desc"><b>Demonstration, not live proximity sensing:</b> this is a timed color sweep, not automatic distance tracking. All nearby compatible watches may receive the same broadcasts. Individual watch targeting would require separately verified unpaired communication.</p>
         </div>
-        <p class="small-desc">Use only with your own bands, away from other guests. Stop cancels remaining cues and requests Lights Off. Auto-stops after 60 seconds; no background broadcasting. Avoid intense flashes around photosensitive people.</p>
+        <p class="small-desc">Use only with your own bands, away from other guests. Stop cancels remaining cues and requests Lights Off. Auto-stops after the selected duration; no background broadcasting. Avoid intense flashes around photosensitive people.</p>
       </section>
       <div class="hint"><span>⚠️</span> Some show effects can continue for several seconds after the phone stops sending. Tap <b>Lights off</b> to send the cancel color.</div>
     </section>
