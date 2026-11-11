@@ -47,7 +47,17 @@ final class BleEngine {
         active = null;
     }
 
+    /** Default power preserves existing colors and fireworks behavior. */
     void send(int companyId, byte[] bytes, int durationMs, boolean withWake) {
+        send(companyId,bytes,durationMs,withWake,AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM);
+    }
+
+    /** Android BLE advertising power hint: 0 ultra low, 1 low, 2 medium, 3 high. */
+    void send(int companyId, byte[] bytes, int durationMs, boolean withWake, int txPower) {
+        if(txPower<AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW ||
+           txPower>AdvertiseSettings.ADVERTISE_TX_POWER_HIGH) {
+            message("Invalid Bluetooth power level"); return;
+        }
         stopCurrent();
         final int id = ++generation;
         running = false;
@@ -62,15 +72,26 @@ final class BleEngine {
             if (advertiser == null) { message("This Bluetooth chip has no advertiser"); return; }
             if (withWake && companyId == 0x0183) {
                 advertise(id, companyId, new byte[]{(byte)0xCC,0x03,0,0,0}, 500,
-                    () -> advertise(id, companyId, bytes, durationMs, null, "Sending magic color…"),
-                    "Waking your band…");
-            } else advertise(id, companyId, bytes, durationMs, null, "Sending magic color…");
+                    () -> advertise(id, companyId, bytes, durationMs, null,
+                        "Sending effect ("+powerName(txPower)+")",txPower),
+                    "Waking band ("+powerName(txPower)+")",txPower);
+            } else advertise(id, companyId, bytes, durationMs, null,
+                "Sending effect ("+powerName(txPower)+")",txPower);
         } catch (SecurityException e) { message("Allow Nearby devices permission"); }
         catch (Exception e) { message("Bluetooth error: " + e.getMessage()); }
     }
 
+    private static String powerName(int power) {
+        switch(power) {
+            case AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW: return "Ultra Low";
+            case AdvertiseSettings.ADVERTISE_TX_POWER_LOW: return "Low";
+            case AdvertiseSettings.ADVERTISE_TX_POWER_HIGH: return "High";
+            default: return "Medium";
+        }
+    }
+
     private void advertise(int id, int companyId, byte[] bytes, int durationMs,
-                           Runnable then, String label) {
+                           Runnable then, String label,int txPower) {
         if (id != generation) return;
         try {
             stopCurrent();
@@ -79,7 +100,7 @@ final class BleEngine {
                 .setIncludeTxPowerLevel(false).setIncludeDeviceName(false).build();
             AdvertiseSettings settings = new AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                .setTxPowerLevel(txPower)
                 .setConnectable(false)
                 .setTimeout(Math.min(durationMs + 1000, 4500)).build();
             message(label);
