@@ -5,25 +5,34 @@
  */
 (()=>{
   const el=id=>document.getElementById(id);
-  const memoryKey='glowquest-fireworks-v1';
+  const memoryKey='glowquest-fireworks-v2';
+  const previousMemoryKey='glowquest-fireworks-v1';
   const EFFECTS=[['color','🎨 Color burst'],['sparkle','✨ Sparkle'],['rainbow','🌈 Rainbow'],
     ['purple-flash','💜 Purple flash'],['circle','🌀 Circle'],['pulse','🔮 Pulse']];
   const VIBES=[['0','None'],['1','Single tap'],['2','Double tap'],['3','Triple tap'],
     ['8','Quick flutter'],['7','Long buzz']];
   const MASKS=[['0','All five'],['1','Top right'],['2','Bottom right'],['3','Bottom left'],['4','Top left']];
+  const DURATIONS=Array.from({length:17},(_,i)=>i+4);
+  const PRESETS=[48,60,96,120,180,240];
   const DEFAULT=[
-    ['color',3,0,0],['color',19,1,1],['sparkle',2,0,0],['color',21,0,3],
-    ['purple-flash',1,0,0],['color',15,3,8],['rainbow',16,0,0],
-    ['color',25,4,2],['circle',2,0,0],['color',16,0,7],['pulse',1,0,0],
-    ['color',27,0,3]
-  ].map(([effect,color,mask,vibration])=>({effect,color,mask,vibration}));
+    ['color',3,0,0],['color',19,0,1],['color',15,0,3],['sparkle',2,0,0],
+    ['color',21,0,8],['color',2,1,2],['color',25,0,3],['rainbow',16,0,0],
+    ['color',8,4,8],['color',16,0,7],['purple-flash',1,0,0],['color',27,0,3]
+  ].map(([effect,color,mask,vibration])=>({effect,color,mask,vibration,holdSeconds:5}));
+  const COLOR_TEST=[3,19,15,21,2,25,8,16,27,2,19,27]
+    .map((color,i)=>({effect:'color',color,mask:0,
+      vibration:[0,1,2,3,0,8,2,3,1,7,8,3][i],holdSeconds:5}));
   let cues=DEFAULT.map(c=>({...c}));
-  let state={active:false,kind:'',step:0,remainingSeconds:0,total:0,status:'Ready for launch'};
+  let state={active:false,kind:'',step:0,remainingSeconds:0,total:0,
+    durationSeconds:60,cuesAttempted:0,radioStatus:'Idle',status:'Ready for launch'};
+  const totalSeconds=()=>cues.reduce((sum,c)=>sum+c.holdSeconds,0);
+  const formatTime=t=>Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
   const rows=[];
   const valid=c=>c&&EFFECTS.some(([name])=>name===c.effect) &&
     Number.isInteger(c.color)&&c.color>=0&&c.color<=31&&c.color!==29&&
     Number.isInteger(c.mask)&&c.mask>=0&&c.mask<=4&&
-    [0,1,2,3,7,8].includes(c.vibration);
+    [0,1,2,3,7,8].includes(c.vibration)&&Number.isInteger(c.holdSeconds)&&
+    c.holdSeconds>=4&&c.holdSeconds<=20;
   const selectControl=(label,pairs,value,apply)=>{
     const s=document.createElement('select');
     s.setAttribute('aria-label',label);
@@ -35,11 +44,16 @@
     return s;
   };
   function update(){
+    let timeOffset=0;
     rows.forEach((row,i)=>{
       const c=cues[i], customizable=c.effect==='color';
       row.effect.value=c.effect;
       row.color.value=String(c.color);row.mask.value=String(c.mask);
       row.vibration.value=String(c.vibration);
+      row.hold.value=String(c.holdSeconds);
+      row.label.textContent=formatTime(timeOffset);
+      timeOffset+=c.holdSeconds;
+      row.hold.disabled=state.active;
       row.color.disabled=state.active||!customizable;
       row.mask.disabled=state.active||!customizable;
       row.vibration.disabled=state.active||!customizable;
@@ -48,9 +62,19 @@
         'purple-flash':'#ae5cff',circle:'#459dff',pulse:'#a361ee'};
       row.swatch.style.background=customizable?PALETTE[c.color][1]:colors[c.effect];
     });
-    const vib=cues.filter(c=>c.effect!=='color'||c.vibration!==0).length;
-    el('fireworkSummary').textContent='12 commands · one every 5 seconds · '+vib+
-      ' vibration/animation cues · short BLE broadcasts';
+    const vib=cues.filter(c=>c.effect==='color'&&c.vibration!==0).length;
+    const animations=cues.filter(c=>c.effect!=='color').length;
+    const length=totalSeconds();
+    el('fireworkSummary').textContent='12 cues · '+formatTime(length)+' total · '+vib+
+      ' vibration cues · '+animations+' built-in animations';
+    el('fireworkLength').value=PRESETS.includes(length)?String(length):'custom';
+    el('fireworkLength').disabled=state.active;
+    el('fireworkWakeEach').disabled=state.active;
+    el('fireworkPlanned').textContent=formatTime(length);
+    if(!state.active){
+      el('fireworkCountdown').textContent=formatTime(length)+' total';
+      el('fireworkProgress').max=length;
+    }
   }
   function draw(){
     const container=el('fireworkCues');container.replaceChildren();rows.length=0;
