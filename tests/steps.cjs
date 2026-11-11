@@ -32,7 +32,7 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
+    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
@@ -47,12 +47,14 @@ Before(async function () {
           remainingSeconds:60,total:12,status:"Fireworks started"};
         window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
       },
-      startWalkBy:()=>{
-        window.__glowMock.shows.push({kind:"walkby",colors:[16,19,27]});
+      startWalkBy:(raw)=>{
+        const requested=JSON.parse(raw);
+        window.__glowMock.shows.push({kind:"walkby",colors:[16,19,27],powers:requested.powers});
         window.__glowMock.fireworks={active:true,kind:"walkby",step:1,
           remainingSeconds:15,total:3,status:"Approach: yellow"};
         window.onFireworksStatus?.(JSON.stringify(window.__glowMock.fireworks));
       },
+      testRange:(stage,power)=>{window.__glowMock.rangeTests.push({stage,power});},
       cancelFireworks:()=>{
         window.__glowMock.cancels++;
         window.__glowMock.fireworks={active:false,kind:"",step:0,
@@ -375,4 +377,45 @@ Then('the Android show request includes per cue timing and wake setting',async f
   assert.equal(shows[0].cues.length,12);
   assert.ok(shows[0].cues.every(c=>c.holdSeconds===10));
   assert.equal(shows[0].wakeEach,true);
+});
+
+
+When('I open the Range Lab', async function () {
+  assert.ok(await this.page.locator('#rangeLab').isVisible());
+});
+Then('I see yellow orange and white power controls with conservative defaults', async function () {
+  assert.equal(await this.page.locator('.range-stage').count(),3);
+  assert.deepEqual(await this.page.locator('.range-stage select')
+    .evaluateAll(elements=>elements.map(e=>e.value)),['3','1','0']);
+});
+When('I set yellow to low power and test it', async function () {
+  await this.page.getByLabel('Yellow transmission power').selectOption('1');
+  await this.page.locator('#rangeTest0').click();
+});
+Then('the Android bridge receives the low-power yellow test', async function () {
+  const calls=await this.page.evaluate(()=>window.__glowMock.rangeTests);
+  assert.deepEqual(calls,[{stage:0,power:1}]);
+  assert.match(await this.page.locator('#rangeLabStatus').innerText(),/Yellow at Low power/);
+});
+When('I choose ultra-low yellow medium orange and high white', async function () {
+  await this.page.locator('#rangePower0').selectOption('0');
+  await this.page.locator('#rangePower1').selectOption('2');
+  await this.page.locator('#rangePower2').selectOption('3');
+});
+Then('the native sweep receives the independent radio power settings', async function () {
+  const calls=await this.page.evaluate(()=>window.__glowMock.shows);
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].powers,[0,2,3]);
+  assert.deepEqual(calls[0].colors,[16,19,27]);
+});
+When('I restore the default Range Lab profile', async function () {
+  await this.page.locator('#rangeReset').click();
+});
+Then('yellow high orange low and white ultra-low are restored', async function () {
+  assert.deepEqual(await this.page.locator('.range-stage select')
+    .evaluateAll(elements=>elements.map(e=>e.value)),['3','1','0']);
+});
+Then('the Range Lab explains the lack of distance sensing', async function () {
+  assert.match(await this.page.locator('#rangeLab').innerText(),/not distance sensing/i);
+  assert.match(await this.page.locator('#rangeLab').innerText(),/Every compatible watch within radio range may respond/);
 });
