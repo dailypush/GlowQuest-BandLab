@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
@@ -176,7 +178,31 @@ public class MainActivity extends Activity {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
+    private String scoutEnvironmentJson() {
+        try{
+            BluetoothAdapter bt=adapter();
+            boolean allowed=hasScanPermission(),enabled=false,scannerReady=false;
+            if(bt!=null && (Build.VERSION.SDK_INT<31 ||
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)==PackageManager.PERMISSION_GRANTED)){
+                try{
+                    enabled=bt.isEnabled();
+                    scannerReady=enabled && allowed && bt.getBluetoothLeScanner()!=null;
+                }catch(SecurityException ignored){}
+            }
+            return new JSONObject()
+                .put("api",Build.VERSION.SDK_INT)
+                .put("phone",Build.MANUFACTURER+" "+Build.MODEL)
+                .put("available",bt!=null).put("bluetoothOn",enabled)
+                .put("scanPermission",allowed).put("scannerReady",scannerReady)
+                .put("legacyLocationRequired",Build.VERSION.SDK_INT<=30)
+                .put("legacyLocationOn",legacyLocationEnabled())
+                .put("foreground",isForeground).put("scanning",scout.isScanning()).toString();
+        }catch(Exception ignored){return "{}";}
+    }
+
     private boolean scoutShowAll;
+    private boolean scoutWaitingPermission;
+    private boolean isForeground;
 
     private boolean legacyLocationEnabled() {
         if (Build.VERSION.SDK_INT >= 31) return true;
@@ -197,14 +223,21 @@ public class MainActivity extends Activity {
             scout.message("Stop the light show before scanning.");return;
         }
         if(!hasScanPermission()){
+            scoutWaitingPermission=true;
             if(Build.VERSION.SDK_INT>=31)
                 requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_CONNECT}, SCOUT_REQUEST);
             else
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, SCOUT_REQUEST);
-            scout.message("Grant scan permission; scanning will start automatically. No pairing.");
+            scout.message("Awaiting BLE scan permission. Scan will resume when the app is ready.");
             return;
         }
+        if(!isForeground){
+            scoutWaitingPermission=true;
+            scout.message("Scanner queued until GlowQuest returns to the foreground.");
+            return;
+        }
+        scoutWaitingPermission=false;
         if(!legacyLocationEnabled()){
             scout.message("Android 6–11 requires device Location to be ON for BLE scanning. GlowQuest never records location.");
             return;
@@ -267,6 +300,19 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String fireworksStatus() {
             return fireworks.snapshot();
         }
+        @JavascriptInterface public String scoutEnvironment() {
+            return scoutEnvironmentJson();
+        }
+        @JavascriptInterface public void copyScoutReport(String report) {
+            mainHandler.post(() -> {
+                try{
+                    ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                    if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText(
+                        "GlowQuest Scout diagnostics",report==null?"":
+                        report.substring(0,Math.min(2000,report.length()))));
+                }catch(Exception ignored){}
+            });
+        }
         @JavascriptInterface public void scanBands(boolean allDevices) {
             mainHandler.post(() -> MainActivity.this.startScout(allDevices));
         }
@@ -282,8 +328,16 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(code, perms, result);
         if (code == NEARBY_REQUEST) notifyUi();
         if (code == SCOUT_REQUEST) {
-            if (hasScanPermission()) startScout(scoutShowAll);
-            else scout.message("Scan permission was not granted. Allow Nearby devices (or Location on Android 11 and earlier).");
+            if(hasScanPermission()){
+                scoutWaitingPermission=true;
+                if(isForeground) mainHandler.post(() -> {
+                    if(scoutWaitingPermission && isForeground) startScout(scoutShowAll);
+                });
+                else scout.message("Permission granted. Scan resumes when the app returns.");
+            }else{
+                scoutWaitingPermission=false;
+                scout.message("Permission denied. Enable Nearby devices for GlowQuest in Android Settings.");
+            }
             notifyScout();
         }
     }
@@ -298,10 +352,20 @@ public class MainActivity extends Activity {
         // Never leave the phone broadcasting if the child leaves the app.
         fireworks.cancel(false,"Sequence stopped because app left foreground");
         engine.stop("Ready to play");
-        scout.stop("Scanner stopped when app left the foreground.");
+        isForeground=false;
+        if(scout.isScanning())
+            scout.stop("Scanner stopped when app left foreground.");
     }
 
-    @Override protected void onResume() { super.onResume(); notifyUi(); notifyScout(); notifyFireworks(); }
+    @Override protected void onResume() {
+        super.onResume();
+        isForeground=true;
+        if(scoutWaitingPermission && hasScanPermission())
+            mainHandler.post(() -> {
+                if(scoutWaitingPermission && isForeground) startScout(scoutShowAll);
+            });
+        notifyUi();notifyScout();notifyFireworks();
+    }
 
     @Override protected void onDestroy() {
         fireworks.cancel(false,"Sequence stopped");
