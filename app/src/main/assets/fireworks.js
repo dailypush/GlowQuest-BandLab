@@ -91,8 +91,12 @@
         c.color,v=>c.color=Number(v));
       const mask=selectControl('Cue '+(i+1)+' LED positions',MASKS,c.mask,v=>c.mask=Number(v));
       const vibration=selectControl('Cue '+(i+1)+' vibration',VIBES,c.vibration,v=>c.vibration=Number(v));
-      controls.append(effect,color,mask,vibration);root.append(head,controls);container.append(root);
-      rows.push({root,swatch,effect,color,mask,vibration});
+      const hold=selectControl('Cue '+(i+1)+' duration',
+        DURATIONS.map(n=>[n,n+' seconds']),c.holdSeconds,
+        v=>c.holdSeconds=Number(v));
+      controls.append(effect,color,mask,vibration,hold);
+      root.append(head,controls);container.append(root);
+      rows.push({root,label,swatch,effect,color,mask,vibration,hold});
     });
     update();
   }
@@ -108,11 +112,17 @@
     el('fireworkSave').disabled=state.active;
     el('fireworkLoad').disabled=state.active;
     el('fireworkReset').disabled=state.active;
+    el('fireworkReliable').disabled=state.active;
     el('walkbyStart').disabled=state.active;
     el('walkbyCancel').disabled=!walking;
-    el('fireworkProgress').value=fire?Math.max(0,60-state.remainingSeconds):0;
-    el('fireworkCountdown').textContent=fire?state.remainingSeconds+'s left':'60s total';
+    const length=fire?state.durationSeconds:totalSeconds();
+    el('fireworkProgress').max=length;
+    el('fireworkProgress').value=fire?Math.max(0,length-state.remainingSeconds):0;
+    el('fireworkCountdown').textContent=fire?formatTime(state.remainingSeconds)+' left':formatTime(totalSeconds())+' total';
     el('fireworkStatus').textContent=fire?state.status:state.active?'Walk-by demo running':state.status;
+    el('fireworkRadio').textContent=fire?
+      state.cuesAttempted+' / 12 cues attempted · Phone BLE: '+state.radioStatus:
+      'Phone broadcasts each cue briefly; there is no band acknowledgment.';
     el('walkbyProgress').value=walking?Math.max(0,15-state.remainingSeconds):0;
     el('walkbyStatus').textContent=walking?state.status:state.active?'Fireworks running':'Ready for the sweep';
     rows.forEach((r,i)=>r.root.classList.toggle('firework-now',fire&&i===state.step-1));
@@ -128,7 +138,12 @@
       toast('Install this Android build to play a show on your bands.');return;
     }
     try {
-      if(method==='startFireworks') window.BandNative[method](JSON.stringify({cues}));
+      if(method==='startFireworks') {
+        if(!cues.every(valid))throw Error('Invalid cue timing or effect');
+        window.BandNative[method](JSON.stringify({
+          cues,wakeEach:el('fireworkWakeEach').checked
+        }));
+      }
       else window.BandNative[method]();
       toast(confirmation);
       setTimeout(poll,220);
@@ -142,7 +157,14 @@
     el('showGrid').hidden=chosen||btn.dataset.show==='studio';
     el('fxStudio').hidden=btn.dataset.show!=='studio';
   }));
-  el('fireworkStart').addEventListener('click',()=>launch('startFireworks','Launching the 60-second finale! 🎆'));
+  el('fireworkLength').addEventListener('change',()=>{
+    const length=Number(el('fireworkLength').value);
+    if(!PRESETS.includes(length))return;
+    cues.forEach(c=>c.holdSeconds=length/12);
+    draw();
+  });
+  el('fireworkStart').addEventListener('click',
+    ()=>launch('startFireworks','Launching '+formatTime(totalSeconds())+' fireworks show 🎆'));
   el('walkbyStart').addEventListener('click',()=>launch('startWalkBy','Yellow → Orange → White sweep!'));
   for(const id of ['fireworkCancel','walkbyCancel'])
     el(id).addEventListener('click',()=>{
@@ -153,16 +175,32 @@
   el('fireworkReset').addEventListener('click',()=>{
     cues=DEFAULT.map(c=>({...c}));draw();toast('Dramatic finale restored.');
   });
+  el('fireworkReliable').addEventListener('click',()=>{
+    cues=COLOR_TEST.map(c=>({...c}));draw();
+    toast('Color-only test loaded to diagnose missed cues.');
+  });
   el('fireworkSave').addEventListener('click',()=>{
-    try{localStorage.setItem(memoryKey,JSON.stringify(cues));toast('Show saved locally.');}
+    try{
+      localStorage.setItem(memoryKey,JSON.stringify({
+        cues,wakeEach:el('fireworkWakeEach').checked
+      }));
+      toast('Show and timing saved locally.');
+    }
     catch(ignore){toast('Could not save this show.');}
   });
   el('fireworkLoad').addEventListener('click',()=>{
     try{
-      const saved=JSON.parse(localStorage.getItem(memoryKey)||'null');
-      if(!Array.isArray(saved)||saved.length!==12||!saved.every(valid))
-        throw new Error('No valid saved 12-cue show');
-      cues=saved.map(c=>({...c}));draw();toast('Saved show restored.');
+      let saved=JSON.parse(localStorage.getItem(memoryKey)||'null');
+      if(!saved){
+        const previous=JSON.parse(localStorage.getItem(previousMemoryKey)||'null');
+        if(Array.isArray(previous))
+          saved={cues:previous.map(c=>({...c,holdSeconds:5})),wakeEach:true};
+      }
+      if(!saved||!Array.isArray(saved.cues)||saved.cues.length!==12||
+         !saved.cues.every(valid))throw Error('No valid saved 12-cue show');
+      cues=saved.cues.map(c=>({...c}));
+      el('fireworkWakeEach').checked=saved.wakeEach!==false;
+      draw();toast('Saved show and timing restored.');
     }catch(err){toast(err.message);}
   });
   draw();poll();setInterval(poll,700);
