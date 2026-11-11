@@ -3,6 +3,14 @@
 A playful, **fully offline**, self-contained Android BLE manufacturer-advertisement app for experimenting with **your own MagicBand+**. Unofficial; not connected with or endorsed by Disney.
 
 
+## GlowQuest 2.4.0 — Bluetooth Range Lab
+
+**New:** Open **Shows → Show Creator → Walk-by Glow → Range Lab**. Select different Android BLE advertising transmit-power hints for each color: Ultra Low (0), Low (1), Medium (2), High (3). The default scripted sweep sends yellow at High, orange at Low and white at Ultra Low. You can change each setting, run a separate 1.8-second color test (with a short wake ping), then play the 15-second sweep. Both wake and effect commands use the selected power; other GlowQuest effects still default to Medium.
+
+The settings are saved only on your phone and can be reset. Existing Stop, cancellation, and foreground-only limits remain.
+
+**Limitations:** Transmit-power levels are *requests to Android's radio*, not measured distances or guaranteed boundaries. Walls, reflections, phone hardware and watch orientation affect reception. All nearby watches can receive any broadcast, including an Ultra Low one, and a nearby watch can miss a High one. This is a **scheduled power sweep**, not an RSSI-driven proximity sensor or an individually addressed watch command. No Disney pairing or MagicBand+ scanning is necessary. Test with your own watches away from guests.
+
 ## GlowQuest 2.3.2 — Scanner fixes and adjustable firework timings
 
 ### Scanner
