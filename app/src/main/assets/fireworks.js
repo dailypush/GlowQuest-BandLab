@@ -14,6 +14,15 @@
   const MASKS=[['0','All five'],['1','Top right'],['2','Bottom right'],['3','Bottom left'],['4','Top left']];
   const DURATIONS=Array.from({length:17},(_,i)=>i+4);
   const PRESETS=[48,60,96,120,180,240];
+  const powerLabels=['Ultra Low','Low','Medium','High'];
+  const rangeStorage='glowquest-range-lab-v1';
+  const defaultPowers=[3,1,0];
+  let powers=defaultPowers.slice();
+  try {
+    const saved=JSON.parse(localStorage.getItem(rangeStorage)||'null');
+    if(Array.isArray(saved)&&saved.length===3&&saved.every(n=>Number.isInteger(n)&&n>=0&&n<=3))
+      powers=saved.slice();
+  }catch(ignored){}
   const DEFAULT=[
     ['color',3,0,0],['color',19,0,1],['color',15,0,3],['sparkle',2,0,0],
     ['color',21,0,8],['color',2,1,2],['color',25,0,3],['rainbow',16,0,0],
@@ -124,9 +133,13 @@
       state.cuesAttempted+' / 12 cues attempted · Phone BLE: '+state.radioStatus:
       'Phone broadcasts each cue briefly; there is no band acknowledgment.';
     el('walkbyProgress').value=walking?Math.max(0,15-state.remainingSeconds):0;
-    el('walkbyStatus').textContent=walking?state.status:state.active?'Fireworks running':'Ready for the sweep';
+    el('walkbyStatus').textContent=walking?
+      state.status+' · Phone BLE: '+(state.radioStatus||'starting'):state.active?
+      'Fireworks running':'Ready for the sweep';
+    if(walking)el('rangeLabStatus').textContent='Running a scheduled power sweep. Watches may receive any phase.';
     rows.forEach((r,i)=>r.root.classList.toggle('firework-now',fire&&i===state.step-1));
     update();
+    renderRange();
   }
   function poll(){
     if(window.BandNative&&window.BandNative.fireworksStatus) {
@@ -144,11 +157,46 @@
           cues,wakeEach:el('fireworkWakeEach').checked
         }));
       }
+      else if(method==='startWalkBy') window.BandNative.startWalkBy(JSON.stringify({powers}));
       else window.BandNative[method]();
       toast(confirmation);
       setTimeout(poll,220);
     } catch(err){toast('Could not start: '+err.message);}
   }
+  function renderRange(){
+    for(let stage=0;stage<3;stage++){
+      el('rangePower'+stage).value=String(powers[stage]);
+      el('rangePower'+stage).disabled=state.active;
+      el('rangeTest'+stage).disabled=state.active;
+    }
+    el('rangeReset').disabled=state.active;
+    el('rangePowerSummary').textContent='Yellow '+powerLabels[powers[0]]+
+      ' → Orange '+powerLabels[powers[1]]+' → White '+powerLabels[powers[2]];
+  }
+  for(let stage=0;stage<3;stage++){
+    el('rangePower'+stage).addEventListener('change',()=>{
+      powers[stage]=Number(el('rangePower'+stage).value);
+      if(!Number.isInteger(powers[stage])||powers[stage]<0||powers[stage]>3)
+        powers[stage]=2;
+      try{localStorage.setItem(rangeStorage,JSON.stringify(powers));}catch(ignored){}
+      renderRange();
+    });
+    el('rangeTest'+stage).addEventListener('click',()=>{
+      if(!window.BandNative?.testRange){
+        toast('Range tests require the Android app.');return;
+      }
+      window.BandNative.testRange(stage,powers[stage]);
+      el('rangeLabStatus').textContent='Requested '+['Yellow','Orange','White'][stage]+
+        ' at '+powerLabels[powers[stage]]+' power. Watch which bands respond.';
+      toast('Power test requested: '+powerLabels[powers[stage]]);
+    });
+  }
+  el('rangeReset').addEventListener('click',()=>{
+    powers=defaultPowers.slice();
+    try{localStorage.setItem(rangeStorage,JSON.stringify(powers));}catch(ignored){}
+    renderRange();
+    toast('Range Lab defaults restored.');
+  });
   window.onFireworksStatus=sync;
   const filter=document.querySelector('[data-show="fireworks"]');
   document.querySelectorAll('[data-show]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -203,5 +251,5 @@
       draw();toast('Saved show and timing restored.');
     }catch(err){toast(err.message);}
   });
-  draw();poll();setInterval(poll,700);
+  draw();renderRange();poll();setInterval(poll,700);
 })();
