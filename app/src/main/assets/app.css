@@ -80,3 +80,16 @@
 .firework-options .firework-wake{flex-direction:row;align-items:center;line-height:1.5}
 .firework-wake input{width:19px;height:19px}
 .firework-options p{font-size:11px;color:#e8daf7;margin:0}
+
+/* Range Lab power-selection experiment: does not measure actual distance. */
+.range-lab{margin:15px 0;padding:14px;background:#292246;border:1px solid #796a9f;border-radius:17px}
+.range-lab h3{margin:3px 0 9px;font-size:16px;color:#f6e9ff}
+.range-lab p{font-size:12px;line-height:1.55}
+.range-stages{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+.range-stage{padding:12px;display:flex;flex-direction:column;gap:8px;background:#392e5d;border:1px solid #8b75ac;border-radius:13px}
+.range-stage label{font-size:12px;font-weight:800}
+.range-stage select{width:100%;padding:11px;border-radius:11px;background:#20183c;color:#fff;border:1px solid #aa91d3}
+.range-stage button{width:100%;margin:0;min-width:0;font-size:12px}
+.range-stage button:disabled,.range-stage select:disabled{opacity:.52}
+.range-summary{padding:10px 12px;border-radius:12px;background:#233a50;color:#e1f5fc;font-size:12px;font-weight:800}
+@media(min-width:700px){.range-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
