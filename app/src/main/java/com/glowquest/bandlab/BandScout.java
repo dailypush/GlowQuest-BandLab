@@ -35,7 +35,7 @@ final class BandScout {
     private ScanCallback callback;
     private Runnable timeout;
     private boolean scanning, showAll;
-    private int packets, scanId;
+    private int packets, scanId, scanFailureCode;
     private long lastUpdate;
     private String message = "Scan nearby BLE broadcasts without pairing.";
 
@@ -54,7 +54,7 @@ final class BandScout {
                 .put("receivedPackets",packets)
                 .put("uniqueDevices",discovered.size())
                 .put("candidateCount",candidates.size())
-                .put("showAll",showAll).toString();
+                .put("showAll",showAll).put("scanFailureCode",scanFailureCode).toString();
         } catch(Exception e) { return "{\"scanning\":false,\"devices\":[]}"; }
     }
 
@@ -64,6 +64,7 @@ final class BandScout {
         stopInternal();
         candidates.clear(); otherDevices.clear(); discovered.clear(); packets=0;
         showAll=diagnostic;
+        scanFailureCode=0;
         final int current=++scanId;
         try {
             BluetoothManager manager=(BluetoothManager) activity.getSystemService(Activity.BLUETOOTH_SERVICE);
@@ -83,8 +84,17 @@ final class BandScout {
                         for(ScanResult result:results)observe(result);});
                 }
                 @Override public void onScanFailed(int code){
-                    handler.post(()->{if(current==scanId)
-                        stop("Android rejected BLE scan ("+code+"). Check Nearby devices and retry.");});
+                    handler.post(()->{
+                        if(current!=scanId)return;
+                        scanFailureCode=code;
+                        String advice=code==ScanCallback.SCAN_FAILED_ALREADY_STARTED?"Already scanning":
+                            code==ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED?"Android registration failed; toggle Bluetooth":
+                            code==ScanCallback.SCAN_FAILED_INTERNAL_ERROR?"Android Bluetooth service error; toggle Bluetooth":
+                            code==ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED?"Scan not supported by radio":
+                            code==ScanCallback.SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES?"Radio is busy":
+                            "Wait 30 seconds before trying again";
+                        stop("BLE scan error "+code+": "+advice);
+                    });
                 }
             };
             ScanSettings settings=new ScanSettings.Builder()
@@ -100,6 +110,8 @@ final class BandScout {
                     candidates.size()+" candidate(s).");
             };
             handler.postDelayed(timeout,SCAN_MS);
+            // A silent scan must still show the running state to the WebView.
+            changed.run();
         } catch(SecurityException e) {
             stopInternal();message("Permission denied for BLE scan. Check Nearby devices.");
         } catch(Exception e) {
@@ -164,11 +176,12 @@ final class BandScout {
         changed.run();
     }
 
+    boolean isScanning(){return scanning;}
     void stop(String reason) { stopInternal();message(reason); }
 
     void clear() {
         stopInternal();
-        candidates.clear();otherDevices.clear();discovered.clear();packets=0;
+        candidates.clear();otherDevices.clear();discovered.clear();packets=0;scanFailureCode=0;
         message("Scan list cleared. Start another scan when ready.");
     }
 
