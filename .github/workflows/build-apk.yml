@@ -19,8 +19,8 @@ jobs:
           node-version: '24'
       - name: Install Cucumber and Playwright
         run: npm install --no-audit --no-fund
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install headless Chromium for screenshot tests
+        run: timeout 180s npx playwright install --only-shell chromium
       - name: Run Gherkin acceptance tests
         run: |
           mkdir -p reports/screenshots
