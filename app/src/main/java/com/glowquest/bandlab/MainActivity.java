@@ -158,7 +158,7 @@ public class MainActivity extends Activity {
             return;
         }
         scout.stop("Scan stopped for foreground light show.");
-        if (walkby) fireworks.startWalkBy();
+        if (walkby) fireworks.startWalkBy(cues);
         else fireworks.startFireworks(cues);
     }
 
@@ -291,8 +291,23 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void startFireworks(String json) {
             mainHandler.post(() -> MainActivity.this.startFireworks(json,false));
         }
-        @JavascriptInterface public void startWalkBy() {
-            mainHandler.post(() -> MainActivity.this.startFireworks(null,true));
+        @JavascriptInterface public void startWalkBy(String config) {
+            mainHandler.post(() -> MainActivity.this.startFireworks(config,true));
+        }
+        @JavascriptInterface public void testRange(int stage,int power) {
+            mainHandler.post(() -> {
+                if(!hasPermission()){
+                    engine.message("Allow Nearby devices to send range tests");
+                    setupBluetooth();return;
+                }
+                BluetoothAdapter bt=adapter();
+                if(bt==null||!bt.isEnabled()||!bt.isMultipleAdvertisementSupported()){
+                    engine.message("Bluetooth advertising unavailable for Range Lab");
+                    setupBluetooth();return;
+                }
+                scout.stop("Scanner stopped for Range Lab transmission.");
+                fireworks.testRange(stage,power);
+            });
         }
         @JavascriptInterface public void cancelFireworks() {
             mainHandler.post(() -> fireworks.cancel(true,"Cancelled — lights off requested"));
