@@ -58,7 +58,11 @@ final class FireworksShow {
     private static class Cue {
         final byte[] payload;
         final int seconds;
-        Cue(byte[] payload,int seconds) {this.payload=payload;this.seconds=seconds;}
+        final int txPower;
+        Cue(byte[] payload,int seconds) {this(payload,seconds,2);}
+        Cue(byte[] payload,int seconds,int txPower) {
+            this.payload=payload;this.seconds=seconds;this.txPower=txPower;
+        }
     }
 
     void startFireworks(String data) {
@@ -116,12 +120,42 @@ final class FireworksShow {
         run(cues,"fireworks",wakeEach);
     }
 
-    void startWalkBy() {
+    /**
+     * Range Lab: three fixed colors, one requested TX power per step.
+     * 0 ultra-low, 1 low, 2 medium, 3 high. No distance sensing or pairing.
+     */
+    void startWalkBy(String config) {
+        int[] powers={3,1,0};
+        try {
+            JSONArray levels=new JSONObject(config).getJSONArray("powers");
+            if(levels.length()!=3)throw new IllegalArgumentException("Three power levels required");
+            for(int i=0;i<3;i++) {
+                powers[i]=levels.getInt(i);
+                if(powers[i]<0||powers[i]>3)
+                    throw new IllegalArgumentException("Power must be Ultra Low through High");
+            }
+        }catch(Exception e){
+            message("Range Lab not started: "+e.getMessage());return;
+        }
         List<Cue> cues=new ArrayList<>();
-        cues.add(new Cue(color(16,5,0,0),5));
-        cues.add(new Cue(color(19,5,0,1),5));
-        cues.add(new Cue(color(27,5,0,2),5));
+        cues.add(new Cue(color(16,5,0,0),5,powers[0]));
+        cues.add(new Cue(color(19,5,0,1),5,powers[1]));
+        cues.add(new Cue(color(27,5,0,2),5,powers[2]));
         run(cues,"walkby",true);
+    }
+
+    /** Sends one controlled range test without starting a repeated show. */
+    void testRange(int stage,int power){
+        if(stage<0||stage>2||power<0||power>3){
+            message("Range Lab: invalid color or power");return;
+        }
+        cancel(false,"Manual range test replacing current show");
+        final int[] colors={16,19,27};
+        final int[] vibration={0,1,2};
+        engine.stop("Preparing range test");
+        engine.send(CID,color(colors[stage],5,0,vibration[stage]),AIR_MS,true,power);
+        message("Range test requested: "+new String[]{"Yellow","Orange","White"}[stage]+
+            " at Android radio power "+power);
     }
 
     private static byte[] color(int index,int seconds,int mask,int vibration) {
@@ -154,7 +188,7 @@ final class FireworksShow {
                 // Wake before EACH cue by default. Without repeat wakeups some
                 // bands ignore later advertisements in a long sequence.
                 // 0.5s wake + 1.8s command fits inside minimum 4s dwell.
-                engine.send(CID,cue.payload,AIR_MS,wakeEach || index==0);
+                engine.send(CID,cue.payload,AIR_MS,wakeEach || index==0,cue.txPower);
                 changed.run();
             };
             tasks.add(fire);
