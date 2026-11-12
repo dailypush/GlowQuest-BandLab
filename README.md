@@ -12,8 +12,20 @@ The following screenshots are **automatically captured from GlowQuest's bundled 
 | <img src="docs/screenshots/colors.webp" alt="GlowQuest mobile color palette" width="260"> | <img src="docs/screenshots/mix.webp" alt="GlowQuest custom LED mixer" width="260"> | <img src="docs/screenshots/effect-studio.webp" alt="GlowQuest lighting and vibration effect controls" width="260"> |
 | **Fireworks Creator** | **Walk-by Range Lab** | **Band Scout** |
 | <img src="docs/screenshots/fireworks.webp" alt="GlowQuest editable fireworks timeline" width="260"> | <img src="docs/screenshots/range-lab.webp" alt="GlowQuest Bluetooth transmission power controls" width="260"> | <img src="docs/screenshots/scout.webp" alt="GlowQuest Band Scout discovery diagnostics" width="260"> |
+| **Show Capture & Replay** | | |
+| <img src="docs/screenshots/show-capture.webp" alt="GlowQuest passive show capture, saved recordings, and private replay controls" width="260"> | | |
 
 [See how screenshots are generated](.github/workflows/build-apk.yml) · [View latest automated test artifacts](https://github.com/dailypush/GlowQuest-BandLab/actions/workflows/build-apk.yml)
+
+## GlowQuest 2.5 — Show Capture and Replay Lab
+
+**New experimental feature:** Inside **Scout → Show Capture & Replay**, manually record passive BLE advertisement observations during a Disney show for 5, 15, 25 or 30 minutes. The recorder looks only at manufacturer **0x0183**. To protect other guests, it **never reads or saves Bluetooth device addresses or names** and **never records unknown raw payloads**. Only E1/E2–E9 frames that match the documented packet-length structure are stored for replay. All raw replay data is private to the app; up to 450 cues and 10 clips are retained. When a recording reaches its time limit, the app saves and stops. Leaving the app saves the current capture automatically.
+
+**Replay when home:** Choose a saved recording, confirm that you're testing only your own watches away from other guests, and explicitly tap Replay. Radio power defaults to Ultra Low. Cues use their original observed order and timing where feasible, but **gaps shorter than 3 seconds are stretched** to avoid overlapping the short wake/advertisement bursts. Replay is bounded to 30 minutes, automatically stops, and offers a manual Stop & Lights Off button. It never pairs devices or transmits while capturing.
+
+**Share analysis with ChatGPT:** Use **Save analysis JSON** to create a local JSON file with elapsed times, packet/repetition counts, 10 dBm RSSI buckets, salted per-recording fingerprints, and decoded effect settings. The default report excludes raw packet bytes, names, and Bluetooth addresses. Optionally export raw *supported-format* replay data only after explicitly enabling that option; packet internals are not fully understood and may carry identifying data.
+
+**Limitations:** MagicBand+ effects synchronized to park shows may use different transports, encrypted commands, or non-BLE advertisements. Observing manufacturer `0x0183` doesn't establish that a packet was part of the show. Multiple nearby emitters can interleave, so a capture isn't guaranteed to represent one continuous show. Real-world replay requires testing with personal hardware. Physical scanning and transmission cannot be validated by the Android emulator.
 
 ## GlowQuest 2.4.0 — Bluetooth Range Lab
 

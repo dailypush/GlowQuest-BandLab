@@ -10,7 +10,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "reports" / "readme-previews"
 DESTINATION = ROOT / "docs" / "screenshots"
-SCREENS = ("colors", "mix", "effect-studio", "fireworks", "range-lab", "scout")
+SCREENS = ("colors", "mix", "effect-studio", "fireworks", "range-lab", "scout", "show-capture")
 MAX_WIDTH = 640
 
 def main():

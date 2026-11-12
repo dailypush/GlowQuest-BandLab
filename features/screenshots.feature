@@ -61,3 +61,11 @@ Feature: GlowQuest app screenshots
     Given GlowQuest is open on a simulated Android phone
     When I open the "Scout" adventure
     Then I capture the "scout" README interface preview
+
+
+  @readme
+  Scenario: Capture Show Capture and Replay Lab for the README gallery
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    Then I capture the "show-capture" README interface preview

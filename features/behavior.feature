@@ -216,3 +216,51 @@ Feature: GlowQuest kid-friendly interactions
     And I launch the walk-by demonstration
     Then the native sweep receives the independent radio power settings
     And the native sequencer receives the yellow orange white sweep
+
+
+  Scenario: Passive show capture starts with no radio transmission
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    Then Show Capture listens without sending any commands
+
+  Scenario: Stopping show capture stores a locally replayable sequence
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    And I stop and save Show Capture
+    Then a replayable recording is listed on my phone
+    And replay stays disabled until I confirm I am testing my own bands
+
+  Scenario: Replaying a recording requires explicit owned-device confirmation
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    And I stop and save Show Capture
+    And I confirm owned-device replay and start at ultra low power
+    Then the app requests replay only after my action
+    When I stop the replay
+    Then the app requests cancellation and lights off
+
+  Scenario: Analysis export is privacy-filtered and raw export is opt-in
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    And I stop and save Show Capture
+    And I export the default privacy-filtered analysis report
+    Then the export excludes raw packets by default
+    When I explicitly enable raw replay-data export
+    Then the optional raw export is requested only with my consent
+
+  Scenario: Recordings require a second deletion confirmation
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    And I stop and save Show Capture
+    And I confirm deletion of the recording
+    Then the recording disappears from the library

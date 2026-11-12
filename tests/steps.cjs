@@ -14,7 +14,7 @@ let server, appUrl;
 BeforeAll(async function () {
   server = createServer(async (req, res) => {
     const file = (req.url || '/').split('?')[0].slice(1) || 'index.html';
-    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','scout.js':'application/javascript','fireworks.js':'application/javascript','app.css':'text/css'};
+    const mime = {'index.html':'text/html','app.js':'application/javascript','fx.js':'application/javascript','scout.js':'application/javascript','show-capture.js':'application/javascript','fireworks.js':'application/javascript','app.css':'text/css'};
     if (!Object.prototype.hasOwnProperty.call(mime,file)) { res.writeHead(404).end(); return; }
     try {
       const body = await readFile(join(assets,file));
@@ -33,7 +33,7 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
+    window.__glowMock={captureStarts:[],captureStops:0,capturePlays:[],capturePlayStops:0,captureExports:[],captureDeletes:[],captureList:[],captureState:{capturing:false,replaying:false,status:'Ready to capture a show.',elapsedSeconds:0,receivedPackets:0,manufacturerPackets:0,supportedPackets:0,unsupportedPackets:0,savedCues:0,droppedCues:0,playIndex:0,playTotal:0,lastSavedId:''},sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
@@ -87,6 +87,48 @@ Before(async function () {
           receivedPackets:0,uniqueDevices:0,candidateCount:0,devices:[]}));
       },
       stopScanBands:()=>{},
+      showCaptureStatus:()=>JSON.stringify(window.__glowMock.captureState),
+      showCaptureList:()=>JSON.stringify(window.__glowMock.captureList),
+      startShowCapture:(title,minutes)=>{
+        window.__glowMock.captureStarts.push({title,minutes});
+        Object.assign(window.__glowMock.captureState,{
+          capturing:true,replaying:false,status:'Passive recording started.',
+          receivedPackets:58,manufacturerPackets:31,supportedPackets:21,
+          unsupportedPackets:10,savedCues:3,elapsedSeconds:14
+        });
+        window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
+      },
+      stopShowCapture:()=>{
+        window.__glowMock.captureStops++;
+        window.__glowMock.captureList.push({
+          id:'glowshow_1794400000000_abcd1234',title:'Evening show',
+          capturedAtUtc:1794400000000,durationMs:15000,
+          supportedCues:3,manufacturerPackets:31,unsupportedPackets:10
+        });
+        Object.assign(window.__glowMock.captureState,{
+          capturing:false,status:'Recording saved locally.',lastSavedId:'glowshow_1794400000000_abcd1234'
+        });
+        window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
+      },
+      replayShowCapture:(id,power)=>{
+        window.__glowMock.capturePlays.push({id,power});
+        Object.assign(window.__glowMock.captureState,{
+          replaying:true,playIndex:1,playTotal:3,status:'Replaying 1 / 3'
+        });
+        window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
+      },
+      stopShowReplay:()=>{
+        window.__glowMock.capturePlayStops++;
+        Object.assign(window.__glowMock.captureState,{
+          replaying:false,status:'Replay stopped — lights off requested.'
+        });
+        window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
+      },
+      exportShowCapture:(id,raw)=>window.__glowMock.captureExports.push({id,raw}),
+      deleteShowCapture:(id)=>{
+        window.__glowMock.captureDeletes.push(id);
+        window.__glowMock.captureList=window.__glowMock.captureList.filter(x=>x.id!==id);
+      },
       off:()=>{},enable:()=>{}
     };
   });
@@ -428,6 +470,7 @@ Then('I capture the {string} README interface preview', async function (name) {
     'colors': null,
     'mix': null,
     'scout': null,
+    'show-capture':'#showCapturePanel',
     'effect-studio': '#fxStudio',
     'fireworks': '#fireworksCreator',
     'range-lab': '#rangeLab'
@@ -447,4 +490,75 @@ Then('I capture the {string} README interface preview', async function (name) {
     animations:'disabled'
   });
   assert.ok(shot.length>10000,'Unexpectedly empty preview: '+name);
+});
+
+
+When('I open Show Capture', async function () {
+  await this.page.locator('#showCapturePanel').scrollIntoViewIfNeeded();
+});
+When('I start a 25-minute passive show recording',async function () {
+  await this.page.getByLabel('Capture duration').selectOption('25');
+  await this.page.locator('#showCaptureLabel').fill('Evening show');
+  await this.page.locator('#showCaptureStart').click();
+});
+Then('Show Capture listens without sending any commands',async function () {
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.captureStarts.length),1);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.captureStarts[0].minutes),25);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.sent.length),0);
+  assert.match(await this.page.locator('#showCaptureStatus').innerText(),/Passive recording/);
+  assert.match(await this.page.locator('#showCaptureStats').innerText(),/31 matching manufacturer 0x0183/);
+});
+When('I stop and save Show Capture',async function () {
+  await this.page.locator('#showCaptureStop').click();
+  await this.page.locator('[data-replay-id]').first().waitFor();
+});
+Then('a replayable recording is listed on my phone',async function () {
+  assert.equal(await this.page.locator('[data-replay-id]').count(),1);
+  assert.match(await this.page.locator('#showCaptureLibrary').innerText(),/3 replayable cues/);
+});
+Then('replay stays disabled until I confirm I am testing my own bands',async function () {
+  assert.equal(await this.page.locator('[data-replay-id]').first().isDisabled(),true);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.capturePlays.length),0);
+});
+When('I confirm owned-device replay and start at ultra low power',async function () {
+  await this.page.locator('#showReplayAgree').check();
+  await this.page.getByLabel('Replay radio power').selectOption('0');
+  await this.page.locator('[data-replay-id]').first().click();
+});
+Then('the app requests replay only after my action',async function () {
+  const values=await this.page.evaluate(()=>window.__glowMock.capturePlays);
+  assert.equal(values.length,1);
+  assert.equal(values[0].power,0);
+  assert.match(await this.page.locator('#showCaptureStatus').innerText(),/Replaying/);
+});
+When('I stop the replay',async function () {
+  await this.page.locator('#showReplayStop').click();
+});
+Then('the app requests cancellation and lights off',async function () {
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.capturePlayStops),1);
+  assert.ok(await this.page.locator('#showReplayStop').isDisabled());
+});
+When('I export the default privacy-filtered analysis report',async function () {
+  await this.page.getByRole('button',{name:'Save analysis JSON'}).click();
+});
+Then('the export excludes raw packets by default',async function () {
+  const exports=await this.page.evaluate(()=>window.__glowMock.captureExports);
+  assert.equal(exports.length,1);
+  assert.equal(exports[0].raw,false);
+});
+When('I explicitly enable raw replay-data export',async function () {
+  await this.page.locator('#showIncludeRaw').check();
+  await this.page.getByRole('button',{name:'Export replay data (raw)'}).click();
+});
+Then('the optional raw export is requested only with my consent',async function () {
+  const exports=await this.page.evaluate(()=>window.__glowMock.captureExports);
+  assert.equal(exports.at(-1).raw,true);
+});
+When('I confirm deletion of the recording',async function () {
+  await this.page.getByRole('button',{name:'Delete'}).click();
+  await this.page.getByRole('button',{name:'Confirm delete'}).click();
+});
+Then('the recording disappears from the library',async function () {
+  assert.equal(await this.page.locator('[data-replay-id]').count(),0);
+  assert.equal(await this.page.evaluate(()=>window.__glowMock.captureDeletes.length),1);
 });
