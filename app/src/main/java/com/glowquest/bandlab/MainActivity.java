@@ -197,7 +197,8 @@ public class MainActivity extends Activity {
             captureWaitingPermission=true;
             if(Build.VERSION.SDK_INT>=31)
                 requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
-                    Manifest.permission.BLUETOOTH_CONNECT},CAPTURE_REQUEST);
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.ACCESS_FINE_LOCATION},CAPTURE_REQUEST);
             else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},CAPTURE_REQUEST);
             showCapture.message("Approve Bluetooth scanning to start the recording.");
             return;
@@ -209,7 +210,7 @@ public class MainActivity extends Activity {
         }
         captureWaitingPermission=false;
         if(!legacyLocationEnabled()){
-            showCapture.message("Android 6–11 requires Location services ON to scan.");
+            showCapture.message("Turn on Android Location services for full beacon scanning.");
             return;
         }
         if(showCapture.isCapturing())return;
@@ -270,7 +271,8 @@ public class MainActivity extends Activity {
     private boolean hasScanPermission() {
         if (Build.VERSION.SDK_INT >= 31)
             return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -290,7 +292,7 @@ public class MainActivity extends Activity {
                 .put("phone",Build.MANUFACTURER+" "+Build.MODEL)
                 .put("available",bt!=null).put("bluetoothOn",enabled)
                 .put("scanPermission",allowed).put("scannerReady",scannerReady)
-                .put("legacyLocationRequired",Build.VERSION.SDK_INT<=30)
+                .put("legacyLocationRequired",true)
                 .put("legacyLocationOn",legacyLocationEnabled())
                 .put("foreground",isForeground).put("scanning",scout.isScanning()).toString();
         }catch(Exception ignored){return "{}";}
@@ -301,7 +303,6 @@ public class MainActivity extends Activity {
     private boolean isForeground;
 
     private boolean legacyLocationEnabled() {
-        if (Build.VERSION.SDK_INT >= 31) return true;
         try {
             if (Build.VERSION.SDK_INT >= 28) {
                 LocationManager lm=(LocationManager)getSystemService(LOCATION_SERVICE);
@@ -326,7 +327,8 @@ public class MainActivity extends Activity {
             scoutWaitingPermission=true;
             if(Build.VERSION.SDK_INT>=31)
                 requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
-                    Manifest.permission.BLUETOOTH_CONNECT}, SCOUT_REQUEST);
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.ACCESS_FINE_LOCATION}, SCOUT_REQUEST);
             else
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, SCOUT_REQUEST);
             scout.message("Awaiting BLE scan permission. Scan will resume when the app is ready.");
@@ -339,7 +341,7 @@ public class MainActivity extends Activity {
         }
         scoutWaitingPermission=false;
         if(!legacyLocationEnabled()){
-            scout.message("Android 6–11 requires device Location to be ON for BLE scanning. GlowQuest never records location.");
+            scout.message("Turn on Android Location for full BLE beacon scanning. GlowQuest does not read GPS coordinates.");
             return;
         }
         scout.start(showAll);
@@ -489,7 +491,7 @@ public class MainActivity extends Activity {
                 });
             }else{
                 captureWaitingPermission=false;
-                showCapture.message("Bluetooth scan permission denied.");
+                showCapture.message("Bluetooth scan or Location permission denied.");
             }
             notifyCapture();
         }
@@ -502,7 +504,7 @@ public class MainActivity extends Activity {
                 else scout.message("Permission granted. Scan resumes when the app returns.");
             }else{
                 scoutWaitingPermission=false;
-                scout.message("Permission denied. Enable Nearby devices for GlowQuest in Android Settings.");
+                scout.message("Permission denied. Enable Nearby devices and Location for GlowQuest in Android Settings.");
             }
             notifyScout();
         }
