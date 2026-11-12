@@ -264,3 +264,53 @@ Feature: GlowQuest kid-friendly interactions
     And I stop and save Show Capture
     And I confirm deletion of the recording
     Then the recording disappears from the library
+
+
+  Scenario: Every standard color can request Android Bluetooth radio TX power
+    Given GlowQuest is open on a simulated Android phone
+    Then the standard animation power selector is visible
+    When I select "Ultra Low" for standard signal power
+    And I select the "Blue" color
+    And I press Send Magic
+    Then the selected effect is transmitted with requested "Ultra Low" power
+
+  Scenario: Preset animations use the same adjustable TX power selector
+    Given GlowQuest is open on a simulated Android phone
+    When I select "High" for standard signal power
+    And I open the "Shows" adventure
+    And I select the "Blue Sparkle" show
+    And I press Send Magic
+    Then the selected effect is transmitted with requested "High" power
+
+  Scenario: TX power selection is retained locally when the app reloads
+    Given GlowQuest is open on a simulated Android phone
+    When I select "Low" for standard signal power
+    And I reload GlowQuest
+    Then the signal power control shows "Low"
+
+  Scenario: Effect Studio applies the selected standard transmission power
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Shows" adventure
+    And I open the Effect Studio
+    And I select "High" for standard signal power
+    And I press Send Magic
+    Then the selected effect is transmitted with requested "High" power
+
+  Scenario: Full Research Capture shows original BLE source addresses and available advertised TX values
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    Then the app reports the live transmitter and advertised TX output
+    And Show Capture listens without sending any commands
+
+  Scenario: Saved captures can be replayed from a single observed source
+    Given GlowQuest is open on a simulated Android phone
+    When I open the "Scout" adventure
+    And I open Show Capture
+    And I start a 25-minute passive show recording
+    And I stop and save Show Capture
+    Then the recording offers source-specific replay
+    When I choose transmitter S001 for replay
+    And I confirm owned-device replay and start at ultra low power
+    Then only the selected source is requested for replay
