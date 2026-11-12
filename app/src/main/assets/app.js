@@ -42,9 +42,19 @@ const five = ([c,tl,tr,bl,br]) => 'E100E909000E0F'+[tl,bl,br,tr,c].map(x=>toHex(
 const sixbit = (r,g,b) => 'E100E908000ED255'+[r,g,b].map(x=>toHex((x&63)*2)).join('')+'B0';
 const paletteColor = idx => PALETTE[idx][1];
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const TX_LABELS=['Ultra Low','Low','Medium','High'];
+let chosenTxPower=2;
+try{
+  const stored=Number(localStorage.getItem('glowquest-default-tx-power-v1'));
+  if(Number.isInteger(stored)&&stored>=0&&stored<=3)chosenTxPower=stored;
+}catch(ignored){}
+
 const broadcast = (company,raw,ms,wake) => {
   if(!window.BandNative){ toast('Preview mode — install Android app to broadcast 📱');return; }
-  try { window.BandNative.transmit(company,raw,ms,wake); toast('Sending a tiny radio message… 📡'); }
+  try {
+    window.BandNative.transmit(company,raw,ms,wake,chosenTxPower);
+    toast('Sending at '+TX_LABELS[chosenTxPower]+' power (requested) 📡');
+  }
   catch(e){toast('Could not start: '+e.message);}
 };
 let selected={name:'Blue',emoji:'💙',hex:single(2),wake:false, colors:Array(5).fill(paletteColor(2)),kind:'single',idx:2};
@@ -206,6 +216,13 @@ function sendSelected(){
   setTimeout(checkStatus,550);
 }
 function installEvents(){
+  $('globalTxPower').value=String(chosenTxPower);
+  $('globalTxPower').addEventListener('change',()=>{
+    const next=Number($('globalTxPower').value);
+    chosenTxPower=Number.isInteger(next)&&next>=0&&next<=3?next:2;
+    try{localStorage.setItem('glowquest-default-tx-power-v1',String(chosenTxPower));}catch(ignored){}
+    toast('Color and animation power: '+TX_LABELS[chosenTxPower]+' (requested)');
+  });
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setPage(t.dataset.page)));
   $('sendBtn').addEventListener('click',sendSelected);
   $('offBtn').addEventListener('click',()=>{

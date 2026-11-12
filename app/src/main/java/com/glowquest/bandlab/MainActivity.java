@@ -362,18 +362,19 @@ public class MainActivity extends Activity {
     public final class Bridge {
         @JavascriptInterface public String status() { return statusJson(); }
         @JavascriptInterface public void enable() { mainHandler.post(MainActivity.this::setupBluetooth); }
-        @JavascriptInterface public void transmit(int companyId, String raw, int ms, boolean wake) {
+        @JavascriptInterface public void transmit(int companyId, String raw, int ms, boolean wake,int txPower) {
             mainHandler.post(() -> {
                 try {
                     if (companyId < 0 || companyId > 65535) throw new IllegalArgumentException("Company ID must fit in 16 bits");
                     byte[] bytes = parseHex(raw);
                     if (ms < 350 || ms > 3500) throw new IllegalArgumentException("Broadcast must be 0.35–3.5 seconds");
+                    if(txPower<0||txPower>3)throw new IllegalArgumentException("TX power must be 0–3");
                     if (!hasPermission()) { engine.message("Allow Nearby devices to send a signal"); setupBluetooth(); return; }
                     fireworks.cancel(false, "Manual color replaced show");
                     if(showCapture.isCapturing())
                         showCapture.stopCapture("Capture saved because an effect was sent.");
                     showCapture.stopReplay(false,"Replay replaced by a manual effect.");
-                    engine.send(companyId, bytes, ms, wake);
+                    engine.send(companyId, bytes, ms, wake,txPower);
                 } catch (Exception e) { engine.message(e.getMessage()); }
                 notifyUi();
             });

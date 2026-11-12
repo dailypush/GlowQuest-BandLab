@@ -298,7 +298,16 @@
     </section>
       </main>
 </div>
-<div class="bottom-area"><div class="bottom-inner"><button id="offBtn" type="button" class="off-button" aria-label="Send lights off">🌙<small>Lights off</small></button><button id="sendBtn" type="button" class="main-button"><span id="sendIcon">✨</span><span id="sendText">SEND MAGIC!</span></button><button id="stopBtn" type="button" class="stop-button" aria-label="Stop transmitting">⏹<small>Stop signal</small></button></div></div>
+<div class="bottom-area"><div class="tx-power-control" aria-label="Bluetooth transmit-power setting">
+  <label for="globalTxPower">📡 Signal power</label>
+  <select id="globalTxPower" aria-label="Color and animation transmit power">
+    <option value="0">Ultra Low</option>
+    <option value="1">Low</option>
+    <option value="2" selected>Medium</option>
+    <option value="3">High</option>
+  </select>
+  <span id="globalTxHint">Requested, not measured</span>
+</div><div class="bottom-inner"><button id="offBtn" type="button" class="off-button" aria-label="Send lights off">🌙<small>Lights off</small></button><button id="sendBtn" type="button" class="main-button"><span id="sendIcon">✨</span><span id="sendText">SEND MAGIC!</span></button><button id="stopBtn" type="button" class="stop-button" aria-label="Stop transmitting">⏹<small>Stop signal</small></button></div></div>
 
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

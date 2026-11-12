@@ -36,7 +36,7 @@ Before(async function () {
     window.__glowMock={captureStarts:[],captureStops:0,capturePlays:[],capturePlayStops:0,captureExports:[],captureDeletes:[],captureList:[],captureState:{capturing:false,replaying:false,status:'Ready to capture a show.',elapsedSeconds:0,receivedPackets:0,manufacturerPackets:0,supportedPackets:0,unsupportedPackets:0,savedCues:0,droppedCues:0,playIndex:0,playTotal:0,lastSavedId:''},sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
-      transmit:(company,hex,ms,wake)=>window.__glowMock.sent.push({company,hex,ms,wake}),
+      transmit:(company,hex,ms,wake,txPower)=>window.__glowMock.sent.push({company,hex,ms,wake,txPower}),
       stop:()=>{
         window.__glowMock.stops++;
         window.__glowMock.fireworks.active=false;
@@ -561,4 +561,25 @@ When('I confirm deletion of the recording',async function () {
 Then('the recording disappears from the library',async function () {
   assert.equal(await this.page.locator('[data-replay-id]').count(),0);
   assert.equal(await this.page.evaluate(()=>window.__glowMock.captureDeletes.length),1);
+});
+
+
+When('I select {string} for standard signal power',async function (power){
+  const levels={'Ultra Low':'0','Low':'1','Medium':'2','High':'3'};
+  assert.ok(Object.prototype.hasOwnProperty.call(levels,power));
+  await this.page.getByLabel('Color and animation transmit power').selectOption(levels[power]);
+});
+Then('the selected effect is transmitted with requested {string} power',async function (power){
+  const levels={'Ultra Low':0,'Low':1,'Medium':2,'High':3};
+  const sent=await this.page.evaluate(()=>window.__glowMock.sent);
+  assert.ok(sent.length>0,'Expected BLE broadcast');
+  assert.equal(sent.at(-1).txPower,levels[power]);
+});
+Then('the signal power control shows {string}',async function (power){
+  const levels={'Ultra Low':'0','Low':'1','Medium':'2','High':'3'};
+  assert.equal(await this.page.locator('#globalTxPower').inputValue(),levels[power]);
+});
+When('I reload GlowQuest',async function (){
+  await this.page.reload({waitUntil:'load'});
+  await this.page.locator('#colorGrid .color-tile').first().waitFor();
 });
