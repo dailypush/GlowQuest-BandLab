@@ -314,3 +314,9 @@ Feature: GlowQuest kid-friendly interactions
     When I choose transmitter S001 for replay
     And I confirm owned-device replay and start at ultra low power
     Then only the selected source is requested for replay
+
+
+  Scenario: Standard color radio power starts at Medium for a fresh install
+    Given GlowQuest is open on a simulated Android phone
+    Then the standard animation power selector is visible
+    And the signal power control shows "Medium"
