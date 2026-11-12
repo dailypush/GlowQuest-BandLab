@@ -124,3 +124,13 @@
 .tx-power-control select{min-width:102px;border-radius:9px;padding:5px 9px;background:#2d254d;color:#fff;
   border:1px solid #9d80cc;font-size:12px}
 .tx-power-control span{font-size:10px;color:#c8bddd}
+
+/* Live BLE transmitter research: 0x0183 doesn't necessarily identify a float. */
+.show-source-list{display:flex;flex-direction:column;gap:6px;margin:10px 0 14px;max-height:280px;overflow:auto}
+.show-source-row{display:flex;flex-direction:column;gap:4px;padding:9px 10px;background:#273554;
+  border:1px solid #527197;border-radius:10px;overflow-wrap:anywhere}
+.show-source-row strong{font-size:11px;color:#d7f7ff}
+.show-source-row small{font-size:10px;line-height:1.45;color:#d7d4ee}
+.show-source-filter{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:750}
+.show-source-filter select{padding:10px;max-width:100%;min-width:0;border:1px solid #806ca7;
+  border-radius:10px;background:#21183b;color:#fff;font-size:11px}
