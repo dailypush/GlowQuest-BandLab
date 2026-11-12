@@ -262,11 +262,14 @@
       </div>
       <p id="showCaptureStatus" role="status" aria-live="polite">Ready to record.</p>
       <p id="showCaptureStats" class="show-capture-stats">0 BLE packets observed</p>
+      <h3>📶 Transmitters heard (live)</h3>
+      <p class="small-desc">Original BLE address and source ID, received RSSI (dBm) and advertised TX output (dBm), when present. RSSI is received signal strength, not output power. TX power is often unavailable.</p>
+      <div id="showCaptureLiveSources" class="show-source-list" aria-live="polite"></div>
       <p id="showCaptureRunning" class="small-desc" hidden>Capture is active.</p>
-      <p class="small-desc">Supported E1/E2–E9 effect frames are saved privately on this phone (up to 450 cues per recording, 10 recordings). Unknown-format packets are counted but not saved. No Bluetooth device names or addresses are retained. Recording stops and saves if you leave the app.</p>
+      <p class="small-desc">Full Research Capture locally retains original BLE addresses, names when available, scan-record bytes (including unknown formats), manufacturer IDs, timestamps, RSSI and optional advertised TX power. Data is bounded and repeated packets aggregated; 0x0183 advertisements are prioritized. Up to 450 supported replay cues and 10 recordings are retained. Recording stops and saves if you leave the app.</p>
       <divider size="sm"/>
       <h3>🏠 Replay at home</h3>
-      <p>Replay your recorded effects using short BLE advertisements at their approximate original timing. Closely spaced cues may be stretched to avoid radio overlap. Only supported-format packets can be replayed.</p>
+      <p>Replay supported effect packets to your own bands at approximate original timing. Choose a transmitter source to isolate one stream; rotating Bluetooth addresses may split a transmitter. Short gaps may be stretched to avoid radio overlap. Unknown-format packets are never replayed.</p>
       <label class="show-capture-check">
         <input id="showReplayAgree" type="checkbox"/>
         I am testing only with my own watches, away from other guests
@@ -286,9 +289,9 @@
       <button id="showCaptureRefresh" type="button" class="text-button">Refresh saved recordings</button>
       <label class="show-capture-check">
         <input id="showIncludeRaw" type="checkbox"/>
-        Allow optional raw-packet JSON export (advanced)
+        I understand full research export includes original Bluetooth addresses, names and raw advertisement data
       </label>
-      <p class="small-desc">Use <b>Save analysis JSON</b> to export timings, repeat counts, signal-strength buckets, and decoded effect parameters—without raw bytes, device identifiers, or names. Upload that file to ChatGPT for analysis. Raw replay-data export is optional and may contain proprietary or identifying fields inside captured packets; review it before sharing. No data leaves GlowQuest automatically.</p>
+      <p class="small-desc">Use <b>Full research JSON (raw)</b> to export original transmitters, complete Android scan records, unknown manufacturer payloads, timestamps, RSSI and advertised TX power for source separation here in ChatGPT. <b>Share-filtered JSON</b> removes addresses, names and raw bytes but keeps the source relationships. The scan record is Android's merged advertisement data, not an over-the-air sniffer capture. No data leaves your phone automatically.</p>
     </section>
       <div class="scout-panel">
         <h3>🔴 Odd / 🔵 Even serial preview</h3>
