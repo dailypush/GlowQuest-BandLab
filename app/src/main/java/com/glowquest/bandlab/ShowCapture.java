@@ -314,7 +314,7 @@ final class ShowCapture {
                     .put("manufacturerPackets",root.optInt("manufacturerPackets"))
                     .put("unsupportedPackets",root.optInt("unsupportedPackets"))
                     .put("sources",root.optJSONObject("research")==null?0:
-                        root.getJSONObject("research").optInt("totalSources"))));
+                        root.getJSONObject("research").optInt("totalSources")));
             }catch(Exception ignored){}
         }
         return clips.toString();
