@@ -239,7 +239,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void startShowReplay(String id,int power){
+    private void startShowReplay(String id,int power,String sourceId){
         if(showCapture.isCapturing()){
             showCapture.message("Stop and save the recording before replay.");return;
         }
@@ -253,7 +253,7 @@ public class MainActivity extends Activity {
         }
         scout.stop("Scanner paused for replay.");
         fireworks.cancel(false,"Playback starting");
-        showCapture.replay(id,power);
+        showCapture.replay(id,power,sourceId);
         if(showCapture.isReplaying())
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
@@ -445,14 +445,17 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public String showCaptureStatus(){return showCapture.snapshot();}
         @JavascriptInterface public String showCaptureList(){return showCapture.list();}
+        @JavascriptInterface public String showCaptureSources(String id){
+            return showCapture.sources(id);
+        }
         @JavascriptInterface public void startShowCapture(String title,int minutes){
             mainHandler.post(()->MainActivity.this.startShowCapture(title,minutes));
         }
         @JavascriptInterface public void stopShowCapture(){
             mainHandler.post(()->showCapture.stopCapture("Recording stopped and saved."));
         }
-        @JavascriptInterface public void replayShowCapture(String id,int power){
-            mainHandler.post(()->MainActivity.this.startShowReplay(id,power));
+        @JavascriptInterface public void replayShowCapture(String id,int power,String sourceId){
+            mainHandler.post(()->MainActivity.this.startShowReplay(id,power,sourceId));
         }
         @JavascriptInterface public void stopShowReplay(){
             mainHandler.post(()->showCapture.stopReplay(true,"Replay stopped — lights off requested."));
