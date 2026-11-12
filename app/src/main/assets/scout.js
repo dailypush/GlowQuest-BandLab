@@ -119,7 +119,7 @@
         'Scan permission '+(s.scanPermission?'GRANTED':'MISSING'),
         'Scanner '+(s.scannerReady?'READY':'NOT READY'),
         s.legacyLocationRequired?
-          'Device Location '+(s.legacyLocationOn?'ON':'OFF (required by older Android)'):
+          'Device Location '+(s.legacyLocationOn?'ON':'OFF (required for full beacon scan)'):
           'Nearby devices permission (Android 12+)',
         'App '+(s.foreground?'foreground':'background')
       ].join(' · ');
