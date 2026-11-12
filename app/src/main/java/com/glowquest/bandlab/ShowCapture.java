@@ -343,7 +343,10 @@ final class ShowCapture {
             }
             report.put("events",events);
             return report.toString(2);
-        }catch(Exception ex){return new JSONObject().put("error",ex.getMessage()).toString();}
+        }catch(Exception ex){
+            // Keep the JavaScript bridge non-throwing even if JSON formatting fails.
+            return "{\"error\":\"Could not generate show report\"}";
+        }
     }
 
     boolean delete(String id){
