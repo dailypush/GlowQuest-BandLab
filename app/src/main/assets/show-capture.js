@@ -1,8 +1,9 @@
 'use strict';
 /*
- * Show Capture: private, foreground-only BLE advertisement recording.
- * Replay is NEVER automatic. No Bluetooth addresses or device names are
- * collected; safe export omits all raw manufacturer payload bytes.
+ * Show Capture: bounded, foreground-only BLE research recording.
+ * Original advertiser addresses and full scan records remain on the phone.
+ * Filtered exports omit addresses, names and raw bytes. Replay is explicit
+ * and only sends validated, supported effect commands.
  */
 (()=>{
   const $=id=>document.getElementById(id);
@@ -10,7 +11,8 @@
     capturing:false,replaying:false,status:'Ready to record.',
     receivedPackets:0,manufacturerPackets:0,supportedPackets:0,
     unsupportedPackets:0,savedCues:0,droppedCues:0,
-    playIndex:0,playTotal:0,elapsedSeconds:0,lastSavedId:''
+    playIndex:0,playTotal:0,elapsedSeconds:0,lastSavedId:'',
+    researchSources:0,researchSamples:0,droppedResearchSamples:0,liveSources:[]
   };
   let recordings=[],lastList='',lastSaved='';
   const api=window.BandNative||null;
@@ -34,8 +36,11 @@
       data.manufacturerPackets+' matching manufacturer 0x0183',
       data.supportedPackets+' supported-format packets',
       data.savedCues+' recorded effect cues',
-      data.unsupportedPackets+' unknown-format packets (not saved)',
-      data.droppedCues+' cues beyond the memory limit'
+      data.unsupportedPackets+' unknown-format effects (saved in raw research)',
+      data.researchSources+' observed transmitters',
+      data.researchSamples+' raw advertising samples saved',
+      data.droppedResearchSamples+' research samples dropped at capacity',
+      data.droppedCues+' replay cues beyond the limit'
     ].join(' · ');
     $('showCaptureStart').disabled=data.capturing||data.replaying;
     $('showCaptureStop').disabled=!data.capturing;
@@ -49,6 +54,7 @@
       'Recording is passive. Keep GlowQuest open with the phone screen awake.':
       'Replay is transmitting only because you explicitly started it. Cue '+
         data.playIndex+' / '+data.playTotal+'.';
+    renderLiveSources();
     for(const button of document.querySelectorAll('[data-replay-id]')){
       button.disabled=data.capturing||data.replaying||!$('showReplayAgree').checked;
     }
@@ -58,6 +64,47 @@
     b.type='button';b.className=kind||'soft-btn';b.textContent=label;
     b.addEventListener('click',action);
     return b;
+  }
+  function renderLiveSources(){
+    const target=$('showCaptureLiveSources');
+    if(!target)return;
+    target.replaceChildren();
+    const sources=Array.isArray(data.liveSources)?data.liveSources:[];
+    if(!sources.length){
+      target.textContent='No transmitters observed in this session yet.';
+      return;
+    }
+    for(const src of sources.slice(0,12)){
+      const row=document.createElement('div');row.className='show-source-row';
+      const title=document.createElement('strong');
+      title.textContent=src.id+' · '+(src.address||'Address unavailable');
+      const detail=document.createElement('small');
+      const rssi=src.rssiAverageDbm==null?'unknown':src.rssiAverageDbm+' dBm';
+      const tx=src.advertisedTxPowerDbm==null?'not advertised':src.advertisedTxPowerDbm+' dBm';
+      detail.textContent=src.packets+' packets · '+src.disneyPackets+
+        ' 0x0183 · RSSI '+rssi+' · advertised TX '+tx;
+      row.append(title,detail);target.append(row);
+    }
+  }
+  function sourceOptions(clip,select){
+    const all=document.createElement('option');
+    all.value='ALL';all.textContent='All observed sources';select.append(all);
+    if(!api?.showCaptureSources)return;
+    try{
+      const response=JSON.parse(api.showCaptureSources(clip.id));
+      if(!Array.isArray(response))return;
+      for(const source of response){
+        if(typeof source.id!=='string'||!/^S[0-9]{3}$/.test(source.id))continue;
+        const opt=document.createElement('option');
+        opt.value=source.id;
+        const tx=source.advertisedTxPowerDbm==null?
+          'TX not advertised':'TX '+source.advertisedTxPowerDbm+' dBm';
+        opt.textContent=source.id+' · '+(source.address||'Unknown address')+
+          ' · RSSI '+(source.rssiAverageDbm??'?')+' dBm · '+tx+
+          ' · '+source.knownEffectPackets+' effects';
+        select.append(opt);
+      }
+    }catch(ignored){}
   }
   function renderLibrary(){
     const list=$('showCaptureLibrary');list.replaceChildren();
@@ -86,16 +133,24 @@
           $('showCaptureStatus').textContent='Confirm you are testing on your own bands first.';return;
         }
         $('showCaptureStatus').textContent='Replay requested. Watch nearby bands for results.';
-        native('replayShowCapture',clip.id,Number($('showReplayPower').value));
+        native('replayShowCapture',clip.id,Number($('showReplayPower').value),
+          sourceSelect.value);
       });
+      const sourceLabel=document.createElement('label');
+      sourceLabel.textContent='Replay source (by received BLE address)';
+      sourceLabel.className='show-source-filter';
+      const sourceSelect=document.createElement('select');
+      sourceSelect.setAttribute('aria-label','Replay source for '+String(clip.title));
+      sourceOptions(clip,sourceSelect);
+      sourceLabel.append(sourceSelect);
       play.setAttribute('data-replay-id',clip.id);
       play.disabled=data.capturing||data.replaying||!$('showReplayAgree').checked;
-      const report=button('Save analysis JSON',()=>{
+      const report=button('Share-filtered JSON',()=>{
         native('exportShowCapture',clip.id,false);
       });
-      const raw=button('Export replay data (raw)',()=>{
+      const raw=button('Full research JSON (raw)',()=>{
         if(!$('showIncludeRaw').checked){
-          $('showCaptureStatus').textContent='Check the raw-data consent box before exporting packet bytes.';
+          $('showCaptureStatus').textContent='Check full research export before sharing addresses and packet bytes.';
           return;
         }
         native('exportShowCapture',clip.id,true);
@@ -111,7 +166,7 @@
         }
       },'text-button');
       controls.append(play,report,raw,del);
-      card.append(head,detail,controls);list.append(card);
+      card.append(head,detail,sourceLabel,controls);list.append(card);
     }
   }
   function sync(s){
@@ -165,6 +220,7 @@
     poll();
   });
   renderStatus();
+  renderLiveSources();
   renderLibrary();
   poll();
   setInterval(poll,1000);
