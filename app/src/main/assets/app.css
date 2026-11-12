@@ -93,3 +93,26 @@
 .range-stage button:disabled,.range-stage select:disabled{opacity:.52}
 .range-summary{padding:10px 12px;border-radius:12px;background:#233a50;color:#e1f5fc;font-size:12px;font-weight:800}
 @media(min-width:700px){.range-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Show Capture & Replay: passive recording, explicit private playback. */
+#showCapturePanel{background:#1d1b38;border-color:#8660a2}
+#showCapturePanel h2{margin:3px 0 9px;font-size:22px}
+#showCapturePanel h3{margin:18px 0 8px;font-size:16px;color:#f3d6fd}
+#showCapturePanel p{line-height:1.55}
+.show-capture-options{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:14px 0}
+.show-capture-options label,.show-replay-power{display:flex;flex-direction:column;gap:7px;font-weight:750;font-size:12px}
+.show-capture-options input,.show-capture-options select,.show-replay-power select{padding:11px;border:1px solid #9b81be;border-radius:11px;background:#30274f;color:#fff;width:100%;min-width:0;font-size:13px}
+.show-capture-check{display:flex;align-items:flex-start;gap:10px;margin:12px 0;font-size:12px;font-weight:600;color:#eadffa}
+.show-capture-check input{width:19px;height:19px;flex-shrink:0;accent-color:#a68ce8;margin:0}
+#showCaptureStats{background:#2d3355;color:#d7f1ff;border:1px solid #526f89;border-radius:12px;padding:11px;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+#showCaptureRunning:not([hidden]){background:#3a2f55;border-radius:9px;padding:10px;color:#fff0d7}
+.show-capture-library{display:flex;flex-direction:column;gap:10px}
+.show-capture-item{display:flex;flex-direction:column;gap:7px;padding:12px;background:#302951;border:1px solid #816eaf;border-radius:14px}
+.show-capture-item strong{font-size:14px;overflow-wrap:anywhere}
+.show-capture-item small{color:#d8c8f7;line-height:1.5}
+.show-capture-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.show-capture-actions button{min-width:0!important;width:100%;margin:0!important;padding:10px 5px;font-size:11px}
+.show-capture-actions button:disabled{opacity:.48}
+.show-replay-power{margin:10px 0}
+#showReplayStop{margin:8px 0}
+@media(min-width:650px){.show-capture-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
