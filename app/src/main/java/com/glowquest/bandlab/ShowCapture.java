@@ -56,7 +56,7 @@ final class ShowCapture {
     private boolean capturing, replaying;
     private int generation, received, vendorPackets, validPackets, unknownVendorPackets,
         overflow, playIndex, playbackCues, scanError;
-    private long startUptime, startUtc, endUptime, replayStarted;
+    private long startUptime, startUtc, endUptime, replayStarted, lastUpdate;
     private String label = "", status = "Ready to capture a show.", lastSavedId = "";
     private byte[] salt = new byte[16];
 
