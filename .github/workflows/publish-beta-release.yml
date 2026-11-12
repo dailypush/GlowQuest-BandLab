@@ -40,13 +40,13 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name GlowQuest-debug-APK --dir release
           test -s release/app-debug.apk
-          mv release/app-debug.apk release/GlowQuest-BandLab-v2.5.0-beta.1.apk
-          sha256sum release/GlowQuest-BandLab-v2.5.0-beta.1.apk | tee release/SHA256SUMS.txt
+          mv release/app-debug.apk release/GlowQuest-BandLab-v2.6.0-beta.1.apk
+          sha256sum release/GlowQuest-BandLab-v2.6.0-beta.1.apk | tee release/SHA256SUMS.txt
 
       - name: Publish beta release (only once for this version)
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: v2.5.0-beta.1
+          RELEASE_TAG: v2.6.0-beta.1
           SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha || '1e1e9086b28b34bdbf74dce0cfc0d627674b7f11' }}
         shell: bash
         run: |
@@ -57,29 +57,34 @@ jobs:
           fi
 
           cat > release/RELEASE_NOTES.md <<'NOTES'
-          # GlowQuest — Band Lab 2.5.0 (Beta 1)
+          # GlowQuest — Band Lab 2.6.0 (Beta 1)
 
           **Sideloadable Android APK for MagicBand+ experiments.**
 
           This early-access build includes the colorful kid-friendly interface,
           Includes all previous 60-second Fireworks, Walk-by Glow and
           Effect Studio features. Removes the "Did it work?" prompt/history.
-          New Show Capture & Replay Lab: passive 0x0183 BLE scanning for up
-          to 30 minutes, privately saved E1/E2-E9 cue recordings, manual
-          replay to the user's own bands at selected TX power, cancel/lights
-          off, and optional sanitized JSON analysis export. Unsupported
-          frames are counted but not replayed. No device names or Bluetooth
-          addresses are stored. Original Fireworks, Range Lab and Scout
-          features remain available.
+          New global TX power selector for Colors, Mix, FX Studio, fades and
+          preset animations (Ultra Low / Low / Medium / High). Power is a
+          requested radio level, not measured output dBm.
+          Full Show Research Capture stores original BLE transmitter
+          addresses, source-grouped raw scan records, manufacturer payloads,
+          unknown packet types, RSSI and advertised TX power if available.
+          Export full raw JSON or a filtered report for external analysis.
+          Replay validated effects only, optionally from one selected source.
+          More complete beacon scanning requires foreground Location and
+          Nearby devices permissions, including Android 12+.
+          Original Fireworks, Range Lab and Scout features remain available.
           Scanning remains local and does not pair or control individual bands.
 
           Scout does not pair, bond or individually address bands. A manual
           serial odd/even color assignment is a preview, not a direct command.
 
           **How to install on your Android phone**
-          1. Download the `GlowQuest-BandLab-v2.5.0-beta.1.apk` asset below.
+          1. Download the `GlowQuest-BandLab-v2.6.0-beta.1.apk` asset below.
           2. Open it from Files/Downloads and allow installation from that source if prompted.
-          3. Launch GlowQuest, enable Bluetooth and grant Nearby devices permission.
+          3. Launch GlowQuest, enable Bluetooth and grant Nearby devices.
+             To scan/research, also grant foreground Location and enable Location services.
           4. Try with your own MagicBand+ away from other guests.
 
           **Beta limitations**
@@ -94,8 +99,12 @@ jobs:
             vibration timing and LED animations vary across bands.
           - Captures may contain interleaved nearby advertising traffic, not
             necessarily a coherent Disney show or all lighting commands.
-          - Stored raw effect bytes are local to the device; default analysis
-            export omits them and all Bluetooth device identifiers.
+          - Full research files contain unmodified BLE addresses/names and
+            may include packets from unrelated nearby devices. Nothing is
+            uploaded automatically; use filtered exports when appropriate.
+          - Captured advertised TX power is available only when transmitted
+            in the BLE packet. RSSI is received power, not actual transmitter
+            output. Standard Send TX power is an Android request/hint.
           - Replay only works on supported E1/E2-E9 advertisement frames,
             at a minimum 3-second transmit spacing for reliability.
           - The walk-by sequence is a fixed timing demo, not proximity sensing.
@@ -105,11 +114,11 @@ jobs:
           NOTES
 
           gh release create "$RELEASE_TAG" \
-            "release/GlowQuest-BandLab-v2.5.0-beta.1.apk" \
+            "release/GlowQuest-BandLab-v2.6.0-beta.1.apk" \
             "release/SHA256SUMS.txt" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$SOURCE_COMMIT" \
-            --title "GlowQuest Band Lab v2.5.0 — Beta 1" \
+            --title "GlowQuest Band Lab v2.6.0 — Beta 1" \
             --notes-file release/RELEASE_NOTES.md \
             --prerelease
 

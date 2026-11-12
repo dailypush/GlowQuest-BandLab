@@ -17,6 +17,26 @@ The following screenshots are **automatically captured from GlowQuest's bundled 
 
 [See how screenshots are generated](.github/workflows/build-apk.yml) · [View latest automated test artifacts](https://github.com/dailypush/GlowQuest-BandLab/actions/workflows/build-apk.yml)
 
+## GlowQuest 2.6 — Full Research Capture and adjustable radio power
+
+### Every ordinary color and animation has a TX power selector
+
+A new **Signal power** selector above the main Send button applies to **Colors, Mix, preset shows and animations, fades, Effect Studio, and custom HEX packets**. Values are Ultra Low (0), Low (1), Medium (2), High (3), persisted on this phone. The wake preamble and effect use the **same selected power**. Previous behavior defaults to Medium. **These are Android advertising power requests, not known output values in dBm.** Real hardware range varies. Fireworks Show Creator's scheduled cues continue using their existing configured/default power, and Range Lab retains its own per-color power settings. Replay has its own TX power setting (Ultra Low by default).
+
+### Full BLE Show Research Capture
+
+**Scout → Show Capture & Replay** now groups detected advertisers by a session-specific source ID and retains their **original BLE addresses**, advertised names (when present), received RSSI values, advertised transmitter TX power **only when available**, manufacturer IDs, unknown-format `0x0183` traffic, and full Android-provided scan records as HEX. Capture remains passive, foreground-only and offline. A bounded in-memory log prioritizes Disney manufacturer data (max 5,500 grouped samples) and keeps up to 1,200 grouped samples of other BLE traffic; repeated identical advertisements are aggregated across short intervals. It keeps up to 500 source addresses and 450 separately validated effects per clip. Counters show sample drops when limits are reached. Nearby devices may rotate BLE addresses. An address is **not** verified as a parade float or show transmitter.
+
+The live source list shows average **RSSI (dBm)**: signal strength *received by your phone*, not power emitted by the transmitter. It also shows **advertised TX power in dBm** when the advertiser includes that information. Most BLE broadcasts omit TX-power data, in which case GlowQuest says **not advertised**. Android has no API to read the actual RF output power of other transmitters.
+
+**Export and research:** Choose **Full research JSON (raw)** to save source addresses, device names, full scan records, unknown payloads and source-specific timelines for analysis in ChatGPT. **Share-filtered JSON** drops addresses, names and raw payload bytes but preserves source IDs and signal statistics. Nothing is uploaded automatically. These raw records can contain other devices' data; review exports before sharing.
+
+**Replay from one transmitter:** Choose **All observed sources** or a specific source ID from a stored recording. Replay still accepts **only validated E1/E2–E9 known-effect frames**; unknown raw packets are *never* automatically replayed. Starting a replay remains opt-in for your own watches. Original timestamps are approximated and closely spaced commands are separated by at least three seconds.
+
+**Android permissions:** Because full beacon discovery may be location-sensitive, Android 12+ now requests Nearby devices **and foreground Location** for scanning; Android 6–11 still needs fine Location. The previous `neverForLocation` assertion was removed because Google warns it can filter BLE beacon advertisements. GlowQuest never requests GPS coordinates or uploads location. Android Location services should be enabled while capturing.
+
+**Limitations:** Android's scan API returns advertisements combined with available scan-response data; it does not expose RF IQ samples or guarantee receiving every packet. Show lighting may use other protocols. A matching BLE manufacturer ID or rising RSSI is evidence, not proof, of a moving float. Research/source grouping and real-device replay need testing on physical hardware.
+
 ## GlowQuest 2.5 — Show Capture and Replay Lab
 
 **New experimental feature:** Inside **Scout → Show Capture & Replay**, manually record passive BLE advertisement observations during a Disney show for 5, 15, 25 or 30 minutes. The recorder looks only at manufacturer **0x0183**. To protect other guests, it **never reads or saves Bluetooth device addresses or names** and **never records unknown raw payloads**. Only E1/E2–E9 frames that match the documented packet-length structure are stored for replay. All raw replay data is private to the app; up to 450 cues and 10 clips are retained. When a recording reaches its time limit, the app saves and stops. Leaving the app saves the current capture automatically.
@@ -39,7 +59,7 @@ The settings are saved only on your phone and can be reset. Existing Stop, cance
 
 ### Scanner
 
-The earlier Band Scout did not show a scan-in-progress indicator until an advertisement was actually received. This version reports scanning immediately, maps Android BLE scanner errors and adds an Android-only scanner health panel with radio/permission availability. A local **Copy diagnostic report** feature captures only the phone type, permission/radio state, packet counts and any error code—not other Bluetooth device identities. Android 12+ BLE scanning uses the Nearby devices permission with \`neverForLocation\`; Android 6–11 still needs Location enabled.
+The earlier Band Scout did not show a scan-in-progress indicator until an advertisement was actually received. This version reports scanning immediately, maps Android BLE scanner errors and adds an Android-only scanner health panel with radio/permission availability. A local **Copy diagnostic report** feature captures only the phone type, permission/radio state, packet counts and any error code—not other Bluetooth device identities. At the time of v2.3.2, Android 12+ scans used \`neverForLocation\`. As of v2.6, the app requests foreground fine Location and removes that beacon-filtering assertion.
 
 To test if a MagicBand+ *advertises* (which differs from its ability to receive broadcasts), turn on one band and hold the rear button approximately three seconds until it pulses blue, then scan without pairing or accepting any pairing request. A band that only receives BLE broadcasts cannot report its distance to the phone.
 
