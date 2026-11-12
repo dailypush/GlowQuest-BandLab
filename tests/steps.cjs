@@ -33,7 +33,7 @@ Before(async function () {
     viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'
   });
   await this.context.addInitScript(() => {
-    window.__glowMock={captureStarts:[],captureStops:0,capturePlays:[],capturePlayStops:0,captureExports:[],captureDeletes:[],captureList:[],captureState:{capturing:false,replaying:false,status:'Ready to capture a show.',elapsedSeconds:0,receivedPackets:0,manufacturerPackets:0,supportedPackets:0,unsupportedPackets:0,savedCues:0,droppedCues:0,playIndex:0,playTotal:0,lastSavedId:''},sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
+    window.__glowMock={captureStarts:[],captureStops:0,capturePlays:[],capturePlayStops:0,captureExports:[],captureDeletes:[],captureList:[],captureState:{capturing:false,replaying:false,status:'Ready to capture a show.',elapsedSeconds:0,receivedPackets:0,manufacturerPackets:0,supportedPackets:0,unsupportedPackets:0,savedCues:0,droppedCues:0,playIndex:0,playTotal:0,lastSavedId:'',researchSources:0,researchSamples:0,droppedResearchSamples:0,liveSources:[]},sent:[],stops:0,scans:0,scanModes:[],clears:0,copiedReport:null,shows:[],rangeTests:[],cancels:0,fireworks:{active:false,kind:"",step:0,remainingSeconds:0,total:0,status:"Ready for launch"}};
     window.BandNative={
       status:()=>JSON.stringify({permissions:true,bluetoothOn:true,supported:true,running:false,status:'Ready to play'}),
       transmit:(company,hex,ms,wake,txPower)=>window.__glowMock.sent.push({company,hex,ms,wake,txPower}),
@@ -89,12 +89,27 @@ Before(async function () {
       stopScanBands:()=>{},
       showCaptureStatus:()=>JSON.stringify(window.__glowMock.captureState),
       showCaptureList:()=>JSON.stringify(window.__glowMock.captureList),
+      showCaptureSources:(id)=>JSON.stringify([
+        {id:'S001',address:'AA:BB:CC:DD:EE:01',deviceName:'Beacon Alpha',
+         packets:27,disneyPackets:18,knownEffectPackets:3,unknownDisneyPackets:15,
+         rssiAverageDbm:-52,rssiMinDbm:-60,rssiMaxDbm:-40,advertisedTxPowerDbm:4},
+        {id:'S002',address:'AA:BB:CC:DD:EE:02',deviceName:'Beacon Beta',
+         packets:15,disneyPackets:13,knownEffectPackets:0,unknownDisneyPackets:13,
+         rssiAverageDbm:-72,rssiMinDbm:-83,rssiMaxDbm:-65,advertisedTxPowerDbm:null}
+      ]),
       startShowCapture:(title,minutes)=>{
         window.__glowMock.captureStarts.push({title,minutes});
         Object.assign(window.__glowMock.captureState,{
           capturing:true,replaying:false,status:'Passive recording started.',
           receivedPackets:58,manufacturerPackets:31,supportedPackets:21,
-          unsupportedPackets:10,savedCues:3,elapsedSeconds:14
+          unsupportedPackets:10,savedCues:3,elapsedSeconds:14,
+          researchSources:2,researchSamples:35,droppedResearchSamples:0,
+          liveSources:[
+            {id:'S001',address:'AA:BB:CC:DD:EE:01',packets:27,
+              disneyPackets:18,rssiAverageDbm:-52,advertisedTxPowerDbm:4},
+            {id:'S002',address:'AA:BB:CC:DD:EE:02',packets:15,
+              disneyPackets:13,rssiAverageDbm:-72,advertisedTxPowerDbm:null}
+          ]
         });
         window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
       },
@@ -103,15 +118,15 @@ Before(async function () {
         window.__glowMock.captureList.push({
           id:'glowshow_1794400000000_abcd1234',title:'Evening show',
           capturedAtUtc:1794400000000,durationMs:15000,
-          supportedCues:3,manufacturerPackets:31,unsupportedPackets:10
+          supportedCues:3,manufacturerPackets:31,unsupportedPackets:10,sources:2
         });
         Object.assign(window.__glowMock.captureState,{
           capturing:false,status:'Recording saved locally.',lastSavedId:'glowshow_1794400000000_abcd1234'
         });
         window.onShowCaptureStatus?.(JSON.stringify(window.__glowMock.captureState));
       },
-      replayShowCapture:(id,power)=>{
-        window.__glowMock.capturePlays.push({id,power});
+      replayShowCapture:(id,power,sourceId)=>{
+        window.__glowMock.capturePlays.push({id,power,sourceId});
         Object.assign(window.__glowMock.captureState,{
           replaying:true,playIndex:1,playTotal:3,status:'Replaying 1 / 3'
         });
@@ -539,7 +554,7 @@ Then('the app requests cancellation and lights off',async function () {
   assert.ok(await this.page.locator('#showReplayStop').isDisabled());
 });
 When('I export the default privacy-filtered analysis report',async function () {
-  await this.page.getByRole('button',{name:'Save analysis JSON'}).click();
+  await this.page.getByRole('button',{name:'Share-filtered JSON'}).click();
 });
 Then('the export excludes raw packets by default',async function () {
   const exports=await this.page.evaluate(()=>window.__glowMock.captureExports);
@@ -548,7 +563,7 @@ Then('the export excludes raw packets by default',async function () {
 });
 When('I explicitly enable raw replay-data export',async function () {
   await this.page.locator('#showIncludeRaw').check();
-  await this.page.getByRole('button',{name:'Export replay data (raw)'}).click();
+  await this.page.getByRole('button',{name:'Full research JSON (raw)'}).click();
 });
 Then('the optional raw export is requested only with my consent',async function () {
   const exports=await this.page.evaluate(()=>window.__glowMock.captureExports);
@@ -582,4 +597,32 @@ Then('the signal power control shows {string}',async function (power){
 When('I reload GlowQuest',async function (){
   await this.page.reload({waitUntil:'load'});
   await this.page.locator('#colorGrid .color-tile').first().waitFor();
+});
+
+
+Then('the app reports the live transmitter and advertised TX output',async function (){
+  const panel=await this.page.locator('#showCaptureLiveSources').innerText();
+  assert.match(panel,/S001/);
+  assert.match(panel,/AA:BB:CC:DD:EE:01/);
+  assert.match(panel,/RSSI -52 dBm/);
+  assert.match(panel,/advertised TX 4 dBm/);
+  assert.match(panel,/S002/);
+  assert.match(panel,/TX not advertised|advertised TX not advertised/);
+});
+Then('the recording offers source-specific replay',async function (){
+  const select=this.page.getByLabel('Replay source for Evening show');
+  assert.deepEqual(await select.locator('option').evaluateAll(o=>o.map(x=>x.value)),
+    ['ALL','S001','S002']);
+});
+When('I choose transmitter S001 for replay',async function (){
+  await this.page.getByLabel('Replay source for Evening show').selectOption('S001');
+});
+Then('only the selected source is requested for replay',async function (){
+  const values=await this.page.evaluate(()=>window.__glowMock.capturePlays);
+  assert.equal(values.length,1);
+  assert.equal(values[0].sourceId,'S001');
+});
+Then('the standard animation power selector is visible',async function (){
+  assert.equal(await this.page.getByLabel('Color and animation transmit power').isVisible(),true);
+  assert.match(await this.page.locator('#globalTxHint').innerText(),/Requested, not measured/);
 });
