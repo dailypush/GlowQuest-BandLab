@@ -85,8 +85,8 @@
         if(!$('showReplayAgree').checked){
           $('showCaptureStatus').textContent='Confirm you are testing on your own bands first.';return;
         }
-        native('replayShowCapture',clip.id,Number($('showReplayPower').value));
         $('showCaptureStatus').textContent='Replay requested. Watch nearby bands for results.';
+        native('replayShowCapture',clip.id,Number($('showReplayPower').value));
       });
       play.setAttribute('data-replay-id',clip.id);
       play.disabled=data.capturing||data.replaying||!$('showReplayAgree').checked;
@@ -144,9 +144,9 @@
     }catch(ignore){}
   }
   $('showCaptureStart').addEventListener('click',()=>{
+    $('showCaptureStatus').textContent='Capture requested. This is receive-only.';
     if(native('startShowCapture',$('showCaptureLabel').value,
       Number($('showCaptureMinutes').value))){
-      $('showCaptureStatus').textContent='Capture requested. This is receive-only.';
       setTimeout(poll,350);
     }
   });
