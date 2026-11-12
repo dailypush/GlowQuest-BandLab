@@ -397,7 +397,7 @@ final class ShowCapture {
             JSONArray items=clip.getJSONArray("events");
             if(items.length()==0){message("This recording has no supported effects to replay.");return;}
             engine.stop("Preparing replay");
-            long when=0,prev=-REPLAY_MIN_GAP_MS;
+            long when=0,prev=-REPLAY_MIN_GAP_MS,firstSelectedMs=-1;
             ArrayList<Frame> replayList=new ArrayList<>();
             ArrayList<Long> offsets=new ArrayList<>();
             int skipped=0;
@@ -408,7 +408,12 @@ final class ShowCapture {
                 String payload=event.getString("payloadHex");
                 byte[] bytes=hex(payload);
                 if(!isKnownEffect(bytes)){skipped++;continue;}
-                when=Math.max(event.getLong("offsetMs"),prev+REPLAY_MIN_GAP_MS);
+                long recordedMs=event.getLong("offsetMs");
+                if(recordedMs<0)continue;
+                if(firstSelectedMs<0)firstSelectedMs=recordedMs;
+                // A one-source replay should start immediately rather than
+                // waiting through earlier activity from other emitters.
+                when=Math.max(recordedMs-firstSelectedMs,prev+REPLAY_MIN_GAP_MS);
                 if(when>MAX_PLAY_MS-5000){skipped+=items.length()-i;break;}
                 prev=when;
                 replayList.add(new Frame((int)when,0,payload,""));
