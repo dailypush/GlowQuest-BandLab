@@ -28,11 +28,10 @@ import java.util.Map;
 /**
  * Explicitly activated, foreground-only BLE show observation and replay.
  *
- * Captures only manufacturer 0x0183 advertisements. Stores raw bytes ONLY for
- * packets matching the known GlowQuest E1/E2 00 E9 length framing; unknown data
- * is counted, not persisted. Never reads or retains names/Bluetooth addresses.
- * Default exports contain decoded cues and salted per-session fingerprints,
- * never raw packet data. Playback requires a second explicit user action.
+ * Full research mode also stores bounded raw BLE scan records, device names,
+ * addresses and signal metadata from Android, grouped by observed advertiser.
+ * The replay pipeline is deliberately separate and only accepts verified
+ * GlowQuest E1/E2-00-E9 framing. Playback is always explicitly requested.
  */
 final class ShowCapture {
     private static final int COMPANY = 0x0183;
@@ -47,6 +46,7 @@ final class ShowCapture {
     private final BleEngine engine;
     private final Runnable changed;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ResearchCapture research=new ResearchCapture();
     private final List<Frame> frames = new ArrayList<>();
     private final Map<String,Frame> recent = new HashMap<>();
     private final List<Runnable> pending = new ArrayList<>();
@@ -62,11 +62,15 @@ final class ShowCapture {
 
     private static final class Frame {
         final int offsetMs, rssiBucket;
-        final String dataHex, fingerprint;
+        final String dataHex, fingerprint, sourceId;
         int lastSeenMs, repetitions=1;
         Frame(int offsetMs,int rssiBucket,String dataHex,String fingerprint) {
+            this(offsetMs,rssiBucket,dataHex,fingerprint,"");
+        }
+        Frame(int offsetMs,int rssiBucket,String dataHex,String fingerprint,String sourceId) {
             this.offsetMs=offsetMs;this.rssiBucket=rssiBucket;
             this.dataHex=dataHex;this.fingerprint=fingerprint;
+            this.sourceId=sourceId;
             this.lastSeenMs=offsetMs;
         }
         JSONObject toJson() throws Exception {
@@ -74,7 +78,7 @@ final class ShowCapture {
             JSONObject out=new JSONObject()
                 .put("offsetMs",offsetMs).put("lastSeenMs",lastSeenMs)
                 .put("repetitions",repetitions).put("rssiBucketDbm",rssiBucket)
-                .put("fingerprint",fingerprint)
+                .put("fingerprint",fingerprint).put("sourceId",sourceId)
                 .put("frameType",packet[0]==(byte)0xE2?"E2-E9":"E1-E9")
                 .put("payloadBytes",packet.length).put("payloadHex",dataHex);
             if(packet.length==9 && packet[3]==5 && packet[6]==14) {
@@ -107,6 +111,10 @@ final class ShowCapture {
                 .put("savedCues",frames.size()).put("droppedCues",overflow)
                 .put("playIndex",playIndex).put("playTotal",playbackCues)
                 .put("scanError",scanError).put("lastSavedId",lastSavedId)
+                .put("researchSources",research.sourceCount())
+                .put("researchSamples",research.rawSampleCount())
+                .put("droppedResearchSamples",research.droppedRaw())
+                .put("liveSources",new JSONArray(research.recentSourceSummary()))
                 .put("maxCaptureMinutes",30).toString();
         }catch(Exception e){return "{\"capturing\":false,\"replaying\":false}";}
     }
@@ -116,7 +124,7 @@ final class ShowCapture {
     void start(String title,int minutes) {
         if(capturing || replaying){message("Stop the current recording or replay first.");return;}
         if(minutes<1||minutes>30){message("Choose a capture duration of 1–30 minutes.");return;}
-        frames.clear();recent.clear();
+        frames.clear();recent.clear();research.reset();
         received=vendorPackets=validPackets=unknownVendorPackets=overflow=scanError=0;
         startUtc=System.currentTimeMillis();
         startUptime=SystemClock.uptimeMillis();
@@ -174,11 +182,14 @@ final class ShowCapture {
         if(result==null)return;
         received++;
         ScanRecord record=result.getScanRecord();
-        if(record==null){signalUpdate();return;}
-        byte[] data=record.getManufacturerSpecificData(COMPANY);
+        byte[] data=record==null?null:record.getManufacturerSpecificData(COMPANY);
+        boolean effect=isKnownEffect(data);
+        // Preserve full BLE advertisement data and original source address
+        // separately from the strictly-validated replay-command stream.
+        String sourceId=research.observe(result,effect);
         if(data==null){signalUpdate();return;}
         vendorPackets++;
-        if(!isKnownEffect(data)){
+        if(!effect){
             unknownVendorPackets++;
             signalUpdate();return;
         }
@@ -186,16 +197,17 @@ final class ShowCapture {
         long t=Math.max(0,SystemClock.uptimeMillis()-startUptime);
         int offset=(int)Math.min(t,MAX_CAPTURE_MS);
         String value=toHex(data);
-        Frame previous=recent.get(value);
+        String key=sourceId+"|"+value;
+        Frame previous=recent.get(key);
         if(previous!=null && offset-previous.lastSeenMs<=1250) {
             previous.lastSeenMs=offset;
             previous.repetitions++;
         } else if(frames.size()<MAX_FRAMES) {
             int rssi=result.getRssi();
             int bucket=(int)Math.round(rssi/10.0)*10;
-            Frame f=new Frame(offset,bucket,value,digest(value));
+            Frame f=new Frame(offset,bucket,value,digest(value),sourceId);
             frames.add(f);
-            recent.put(value,f);
+            recent.put(key,f);
         }else overflow++;
         signalUpdate();
     }
@@ -215,7 +227,7 @@ final class ShowCapture {
         capturing=false;
         lastSavedId=save();
         status=reason+" "+frames.size()+" supported cues; "+
-            unknownVendorPackets+" other 0x0183 packets (not saved).";
+            unknownVendorPackets+" unknown 0x0183 packets; full research log saved separately.";
         changed.run();
     }
 
@@ -241,7 +253,8 @@ final class ShowCapture {
                 .put("supportedPackets",validPackets)
                 .put("unsupportedPackets",unknownVendorPackets)
                 .put("droppedCues",overflow)
-                .put("scanError",scanError);
+                .put("scanError",scanError)
+                .put("research",research.toJson());
             JSONArray data=new JSONArray();
             for(Frame frame:frames)data.put(frame.toJson());
             clip.put("events",data);
@@ -269,7 +282,7 @@ final class ShowCapture {
         if(id==null||!id.matches("glowshow_[0-9]{10,15}_[0-9a-f]{1,8}"))
             throw new IllegalArgumentException("Invalid recording identifier");
         File file=new File(activity.getFilesDir(),id+".json");
-        if(!file.isFile()||file.length()>256_000)throw new IllegalArgumentException("Recording not found or too large");
+        if(!file.isFile()||file.length()>15_000_000)throw new IllegalArgumentException("Recording not found or too large");
         byte[] bytes=new byte[(int)file.length()];
         try(FileInputStream input=new FileInputStream(file)){
             int offset=0,n;
@@ -299,10 +312,21 @@ final class ShowCapture {
                     .put("durationMs",root.optLong("durationMs"))
                     .put("supportedCues",root.getJSONArray("events").length())
                     .put("manufacturerPackets",root.optInt("manufacturerPackets"))
-                    .put("unsupportedPackets",root.optInt("unsupportedPackets")));
+                    .put("unsupportedPackets",root.optInt("unsupportedPackets"))
+                    .put("sources",root.optJSONObject("research")==null?0:
+                        root.getJSONObject("research").optInt("totalSources"))));
             }catch(Exception ignored){}
         }
         return clips.toString();
+    }
+
+    String sources(String id){
+        try{
+            JSONObject research=load(id).optJSONObject("research");
+            if(research==null)return "[]";
+            JSONArray sources=research.optJSONArray("sources");
+            return sources==null?"[]":sources.toString();
+        }catch(Exception ignored){return "[]";}
     }
 
     String analysis(String id,boolean includeRaw) {
@@ -320,9 +344,9 @@ final class ShowCapture {
                 .put("droppedCues",clip.optInt("droppedCues"))
                 .put("scanError",clip.optInt("scanError"))
                 .put("containsRawPayloads",includeRaw)
-                .put("note","0x0183 traffic is not proven to originate from the Disney show. " +
-                    "Only supported E1/E2-00-E9 frames are replayable. " +
-                    "BLE device addresses and names were never recorded.");
+                .put("note","0x0183 traffic is not proven to originate from the show. " +
+                    "Only supported E1/E2-00-E9 packets are replayable. " +
+                    "RSSI is receive strength; advertised TX dBm may be unavailable.");
             JSONArray events=new JSONArray();
             JSONArray originals=clip.getJSONArray("events");
             for(int i=0;i<originals.length();i++){
@@ -333,6 +357,7 @@ final class ShowCapture {
                     .put("repetitions",item.optInt("repetitions"))
                     .put("rssiBucketDbm",item.optInt("rssiBucketDbm"))
                     .put("fingerprint",item.optString("fingerprint"))
+                    .put("sourceId",item.optString("sourceId",""))
                     .put("frameType",item.optString("frameType"))
                     .put("effectClass",item.optString("effectClass"))
                     .put("payloadBytes",item.optInt("payloadBytes"));
@@ -342,6 +367,9 @@ final class ShowCapture {
                 events.put(clean);
             }
             report.put("events",events);
+            JSONObject full=clip.optJSONObject("research");
+            if(full!=null)
+                report.put("research",ResearchCapture.filter(full,includeRaw));
             return report.toString(2);
         }catch(Exception ex){
             // Keep the JavaScript bridge non-throwing even if JSON formatting fails.
@@ -358,7 +386,10 @@ final class ShowCapture {
         }catch(Exception e){message("Recording not found.");return false;}
     }
 
-    void replay(String id,int power) {
+    void replay(String id,int power,String sourceId) {
+        if(sourceId==null||(!sourceId.equals("ALL")&&!sourceId.matches("S[0-9]{3}"))){
+            message("Choose a valid source or All Sources.");return;
+        }
         if(capturing || replaying){message("Stop the current recording/replay first.");return;}
         if(power<0||power>3){message("Invalid replay transmission power.");return;}
         try{
@@ -372,6 +403,8 @@ final class ShowCapture {
             int skipped=0;
             for(int i=0;i<items.length() && replayList.size()<MAX_FRAMES;i++){
                 JSONObject event=items.getJSONObject(i);
+                if(!"ALL".equals(sourceId) && !sourceId.equals(event.optString("sourceId")))
+                    continue;
                 String payload=event.getString("payloadHex");
                 byte[] bytes=hex(payload);
                 if(!isKnownEffect(bytes)){skipped++;continue;}
@@ -381,7 +414,9 @@ final class ShowCapture {
                 replayList.add(new Frame((int)when,0,payload,""));
                 offsets.add(when);
             }
-            if(replayList.isEmpty()){message("No valid replayable commands in this recording.");return;}
+            if(replayList.isEmpty()){
+                message("No supported commands captured for the selected source.");return;
+            }
             replaying=true;playIndex=0;playbackCues=replayList.size();
             replayStarted=SystemClock.uptimeMillis();
             status="Replaying "+playbackCues+" supported cues. "+skipped+" skipped.";
