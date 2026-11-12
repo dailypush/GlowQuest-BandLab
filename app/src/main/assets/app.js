@@ -45,8 +45,11 @@ const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const TX_LABELS=['Ultra Low','Low','Medium','High'];
 let chosenTxPower=2;
 try{
-  const stored=Number(localStorage.getItem('glowquest-default-tx-power-v1'));
-  if(Number.isInteger(stored)&&stored>=0&&stored<=3)chosenTxPower=stored;
+  const storedText=localStorage.getItem('glowquest-default-tx-power-v1');
+  if(storedText!==null){
+    const stored=Number(storedText);
+    if(Number.isInteger(stored)&&stored>=0&&stored<=3)chosenTxPower=stored;
+  }
 }catch(ignored){}
 
 const broadcast = (company,raw,ms,wake) => {
