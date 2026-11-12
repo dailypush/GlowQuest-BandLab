@@ -6,6 +6,7 @@
 <script defer src="app.js"></script>
 <script defer src="fx.js"></script>
 <script defer src="scout.js"></script>
+<script defer src="show-capture.js"></script>
 <script defer src="fireworks.js"></script>
 </head><body>
 <div class="cosmos"><i></i><i></i><i></i><i></i><i></i></div>
@@ -235,6 +236,60 @@
         <button id="scoutReset" type="button" class="text-button">Clear scan results</button>
         <p class="small-desc">Android 12+ needs Nearby devices permission. Android 6–11 also needs device Location enabled and scan location permission; GlowQuest never reads or saves your location.</p>
       </div>
+    <section class="scout-panel" id="showCapturePanel" aria-label="Show Capture and Replay Lab">
+      <div class="section-head"><div>
+        <div class="kicker">BLE SHOW LAB · EXPERIMENTAL</div>
+        <h2>🎆 Show Capture & Replay</h2>
+        <p>Listen during a show, save supported BLE lighting-effect packets, and test them later on your own MagicBand+ watches.</p>
+      </div></div>
+      <p class="hint">⚠️ Capture is <b>receive-only</b>. Disney's show control may use other radios or packet formats, and park Bluetooth traffic can come from many unrelated sources. A detected packet is not proof it belongs to the performance. No connection, pairing, or transmission occurs while recording.</p>
+      <div class="show-capture-options">
+        <label>Recording label
+          <input id="showCaptureLabel" type="text" maxlength="48" placeholder="Example: Evening fireworks"/>
+        </label>
+        <label>Maximum capture length
+          <select id="showCaptureMinutes" aria-label="Capture duration">
+            <option value="5">5 minutes</option>
+            <option value="15" selected>15 minutes</option>
+            <option value="25">25 minutes</option>
+            <option value="30">30 minutes</option>
+          </select>
+        </label>
+      </div>
+      <div class="scout-actions">
+        <button id="showCaptureStart" type="button" class="soft-btn">⏺ Start passive capture</button>
+        <button id="showCaptureStop" type="button" class="soft-btn" disabled>⏹ Stop &amp; save</button>
+      </div>
+      <p id="showCaptureStatus" role="status" aria-live="polite">Ready to record.</p>
+      <p id="showCaptureStats" class="show-capture-stats">0 BLE packets observed</p>
+      <p id="showCaptureRunning" class="small-desc" hidden>Capture is active.</p>
+      <p class="small-desc">Supported E1/E2–E9 effect frames are saved privately on this phone (up to 450 cues per recording, 10 recordings). Unknown-format packets are counted but not saved. No Bluetooth device names or addresses are retained. Recording stops and saves if you leave the app.</p>
+      <divider size="sm"/>
+      <h3>🏠 Replay at home</h3>
+      <p>Replay your recorded effects using short BLE advertisements at their approximate original timing. Closely spaced cues may be stretched to avoid radio overlap. Only supported-format packets can be replayed.</p>
+      <label class="show-capture-check">
+        <input id="showReplayAgree" type="checkbox"/>
+        I am testing only with my own watches, away from other guests
+      </label>
+      <label class="show-replay-power">Replay radio power
+        <select id="showReplayPower" aria-label="Replay radio power">
+          <option value="0" selected>Ultra Low (recommended)</option>
+          <option value="1">Low</option>
+          <option value="2">Medium</option>
+          <option value="3">High</option>
+        </select>
+      </label>
+      <button id="showReplayStop" type="button" class="soft-btn firework-stop" disabled>⏹ Stop replay &amp; lights off</button>
+      <h3>📁 Saved recordings</h3>
+      <p id="showCaptureLibraryCount">0 saved recordings</p>
+      <div id="showCaptureLibrary" class="show-capture-library"></div>
+      <button id="showCaptureRefresh" type="button" class="text-button">Refresh saved recordings</button>
+      <label class="show-capture-check">
+        <input id="showIncludeRaw" type="checkbox"/>
+        Allow optional raw-packet JSON export (advanced)
+      </label>
+      <p class="small-desc">Use <b>Save analysis JSON</b> to export timings, repeat counts, signal-strength buckets, and decoded effect parameters—without raw bytes, device identifiers, or names. Upload that file to ChatGPT for analysis. Raw replay-data export is optional and may contain proprietary or identifying fields inside captured packets; review it before sharing. No data leaves GlowQuest automatically.</p>
+    </section>
       <div class="scout-panel">
         <h3>🔴 Odd / 🔵 Even serial preview</h3>
         <p>When a watch candidate appears, enter its <b>known</b> serial to preview a color: even last numeric digit = blue, odd = red. Bluetooth addresses and names are not verified serials. RSSI is only a rough proximity signal, not a measured distance.</p>
