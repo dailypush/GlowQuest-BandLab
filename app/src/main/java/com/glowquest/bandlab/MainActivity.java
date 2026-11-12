@@ -22,6 +22,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
+import android.view.WindowManager;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import android.widget.FrameLayout;
 import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
@@ -30,12 +33,19 @@ public class MainActivity extends Activity {
     private static final int NEARBY_REQUEST = 240;
     private static final int ENABLE_REQUEST = 241;
     private static final int SCOUT_REQUEST = 242;
+    private static final int CAPTURE_REQUEST = 243;
+    private static final int EXPORT_REQUEST = 244;
     private static final String HOME = "file:///android_asset/index.html";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView web;
     private BleEngine engine;
     private BandScout scout;
     private FireworksShow fireworks;
+    private ShowCapture showCapture;
+    private boolean captureWaitingPermission;
+    private String queuedCaptureLabel="";
+    private int queuedCaptureMinutes=15;
+    private String pendingExport;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -45,6 +55,7 @@ public class MainActivity extends Activity {
         engine = new BleEngine(this, this::notifyUi);
         scout = new BandScout(this, this::notifyScout);
         fireworks = new FireworksShow(engine, this::notifyFireworks);
+        showCapture = new ShowCapture(this,engine,this::notifyCapture);
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(14, 11, 37));
         WebSettings s = web.getSettings();
@@ -65,7 +76,8 @@ public class MainActivity extends Activity {
                     "file:///android_asset/app.js".equals(url) ||
                     "file:///android_asset/fx.js".equals(url) ||
                     "file:///android_asset/scout.js".equals(url) ||
-                    "file:///android_asset/fireworks.js".equals(url);
+                    "file:///android_asset/fireworks.js".equals(url) ||
+                    "file:///android_asset/show-capture.js".equals(url);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !allowed(request.getUrl().toString());
@@ -157,9 +169,93 @@ public class MainActivity extends Activity {
             setupBluetooth();
             return;
         }
+        if(showCapture.isCapturing())
+            showCapture.stopCapture("Capture stopped to start a transmitted effect.");
+        showCapture.stopReplay(false,"Replay replaced by effect.");
         scout.stop("Scan stopped for foreground light show.");
         if (walkby) fireworks.startWalkBy(cues);
         else fireworks.startFireworks(cues);
+    }
+
+    private void notifyCapture() {
+        mainHandler.post(() -> {
+            if(web!=null)web.evaluateJavascript(
+                "window.onShowCaptureStatus && window.onShowCaptureStatus("+
+                JSONObject.quote(showCapture.snapshot())+")",null);
+            if(!showCapture.isCapturing()&&!showCapture.isReplaying())
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        });
+    }
+
+    private void startShowCapture(String label,int minutes){
+        queuedCaptureLabel=label;
+        queuedCaptureMinutes=minutes;
+        if(showCapture.isReplaying()){
+            showCapture.message("Stop the replay before beginning a capture.");return;
+        }
+        if(!hasScanPermission()){
+            captureWaitingPermission=true;
+            if(Build.VERSION.SDK_INT>=31)
+                requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT},CAPTURE_REQUEST);
+            else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},CAPTURE_REQUEST);
+            showCapture.message("Approve Bluetooth scanning to start the recording.");
+            return;
+        }
+        if(!isForeground){
+            captureWaitingPermission=true;
+            showCapture.message("Capture will start when the app returns to foreground.");
+            return;
+        }
+        captureWaitingPermission=false;
+        if(!legacyLocationEnabled()){
+            showCapture.message("Android 6–11 requires Location services ON to scan.");
+            return;
+        }
+        if(showCapture.isCapturing())return;
+        fireworks.cancel(false,"Stopped for passive capture");
+        engine.stop("No transmissions during Show Capture");
+        scout.stop("Scout paused while capturing Disney-style advertisements.");
+        showCapture.start(label,minutes);
+        if(showCapture.isCapturing())
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
+    private void exportShowCapture(String id,boolean includeRaw){
+        String report=showCapture.analysis(id,includeRaw);
+        if(report.contains("\"error\"")){
+            showCapture.message("Could not prepare the recording report.");return;
+        }
+        pendingExport=report;
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE,
+            includeRaw?"GlowQuest-replay-packets.json":"GlowQuest-show-analysis.json");
+        try{startActivityForResult(intent,EXPORT_REQUEST);}
+        catch(Exception ex){
+            pendingExport=null;
+            showCapture.message("No file picker available for JSON export.");
+        }
+    }
+
+    private void startShowReplay(String id,int power){
+        if(showCapture.isCapturing()){
+            showCapture.message("Stop and save the recording before replay.");return;
+        }
+        if(!hasPermission()){
+            showCapture.message("Allow Nearby devices advertising permission first.");
+            setupBluetooth();return;
+        }
+        BluetoothAdapter bt=adapter();
+        if(bt==null || !bt.isEnabled() || !bt.isMultipleAdvertisementSupported()){
+            showCapture.message("BLE advertising unavailable on this phone.");return;
+        }
+        scout.stop("Scanner paused for replay.");
+        fireworks.cancel(false,"Playback starting");
+        showCapture.replay(id,power);
+        if(showCapture.isReplaying())
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private void notifyScout() {
@@ -219,6 +315,10 @@ public class MainActivity extends Activity {
 
     private void startScout(boolean showAll) {
         scoutShowAll=showAll;
+        if(showCapture.isCapturing() || showCapture.isReplaying()){
+            scout.message("Stop recording/replay before starting Band Scout.");
+            return;
+        }
         if(fireworks.isActive()){
             scout.message("Stop the light show before scanning.");return;
         }
@@ -270,6 +370,9 @@ public class MainActivity extends Activity {
                     if (ms < 350 || ms > 3500) throw new IllegalArgumentException("Broadcast must be 0.35–3.5 seconds");
                     if (!hasPermission()) { engine.message("Allow Nearby devices to send a signal"); setupBluetooth(); return; }
                     fireworks.cancel(false, "Manual color replaced show");
+                    if(showCapture.isCapturing())
+                        showCapture.stopCapture("Capture saved because an effect was sent.");
+                    showCapture.stopReplay(false,"Replay replaced by a manual effect.");
                     engine.send(companyId, bytes, ms, wake);
                 } catch (Exception e) { engine.message(e.getMessage()); }
                 notifyUi();
@@ -279,12 +382,20 @@ public class MainActivity extends Activity {
             mainHandler.post(() -> {
                 if (!hasPermission()) { setupBluetooth(); return; }
                 fireworks.cancel(false, "Lights off");
+                if(showCapture.isCapturing())
+                    showCapture.stopCapture("Capture saved because Lights Off was requested.");
+                showCapture.stopReplay(false,"Replay stopped by Lights Off.");
                 engine.send(0x0183, parseHex("E100E90500090E1DB0"), 1200, false);
             });
         }
         @JavascriptInterface public void stop() {
             mainHandler.post(() -> {
-                if (fireworks.isActive()) fireworks.cancel(true,"Cancelled — lights off requested");
+                if(showCapture.isCapturing())
+                    showCapture.stopCapture("Recording stopped and saved.");
+                if(showCapture.isReplaying())
+                    showCapture.stopReplay(true,"Replay stopped — lights off requested.");
+                else if (fireworks.isActive())
+                    fireworks.cancel(true,"Cancelled — lights off requested");
                 else engine.stop("Transmission stopped");
             });
         }
@@ -305,6 +416,9 @@ public class MainActivity extends Activity {
                     engine.message("Bluetooth advertising unavailable for Range Lab");
                     setupBluetooth();return;
                 }
+                if(showCapture.isCapturing())
+                    showCapture.stopCapture("Capture saved before Range Lab transmission.");
+                showCapture.stopReplay(false,"Range test replacing replay.");
                 scout.stop("Scanner stopped for Range Lab transmission.");
                 fireworks.testRange(stage,power);
             });
@@ -328,6 +442,26 @@ public class MainActivity extends Activity {
                 }catch(Exception ignored){}
             });
         }
+        @JavascriptInterface public String showCaptureStatus(){return showCapture.snapshot();}
+        @JavascriptInterface public String showCaptureList(){return showCapture.list();}
+        @JavascriptInterface public void startShowCapture(String title,int minutes){
+            mainHandler.post(()->MainActivity.this.startShowCapture(title,minutes));
+        }
+        @JavascriptInterface public void stopShowCapture(){
+            mainHandler.post(()->showCapture.stopCapture("Recording stopped and saved."));
+        }
+        @JavascriptInterface public void replayShowCapture(String id,int power){
+            mainHandler.post(()->MainActivity.this.startShowReplay(id,power));
+        }
+        @JavascriptInterface public void stopShowReplay(){
+            mainHandler.post(()->showCapture.stopReplay(true,"Replay stopped — lights off requested."));
+        }
+        @JavascriptInterface public void exportShowCapture(String id,boolean raw){
+            mainHandler.post(()->MainActivity.this.exportShowCapture(id,raw));
+        }
+        @JavascriptInterface public void deleteShowCapture(String id){
+            mainHandler.post(()->showCapture.delete(id));
+        }
         @JavascriptInterface public void scanBands(boolean allDevices) {
             mainHandler.post(() -> MainActivity.this.startScout(allDevices));
         }
@@ -342,6 +476,19 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {
         super.onRequestPermissionsResult(code, perms, result);
         if (code == NEARBY_REQUEST) notifyUi();
+        if(code==CAPTURE_REQUEST) {
+            if(hasScanPermission()){
+                captureWaitingPermission=true;
+                if(isForeground)mainHandler.post(()->{
+                    if(captureWaitingPermission && isForeground)
+                        startShowCapture(queuedCaptureLabel,queuedCaptureMinutes);
+                });
+            }else{
+                captureWaitingPermission=false;
+                showCapture.message("Bluetooth scan permission denied.");
+            }
+            notifyCapture();
+        }
         if (code == SCOUT_REQUEST) {
             if(hasScanPermission()){
                 scoutWaitingPermission=true;
@@ -359,12 +506,27 @@ public class MainActivity extends Activity {
 
     @Override public void onActivityResult(int code, int result, Intent data) {
         super.onActivityResult(code, result, data);
+        if(code==EXPORT_REQUEST){
+            if(result==RESULT_OK && data!=null && data.getData()!=null && pendingExport!=null){
+                try(OutputStream output=getContentResolver().openOutputStream(data.getData())){
+                    if(output==null)throw new IllegalStateException("Document unavailable");
+                    output.write(pendingExport.getBytes(StandardCharsets.UTF_8));
+                    showCapture.message("JSON export saved. Upload it here for analysis.");
+                }catch(Exception ex){
+                    showCapture.message("Could not save JSON report: "+ex.getClass().getSimpleName());
+                }
+            }
+            pendingExport=null;
+        }
         if (code == ENABLE_REQUEST) notifyUi();
     }
 
     @Override protected void onPause() {
         super.onPause();
         // Never leave the phone broadcasting if the child leaves the app.
+        if(showCapture.isCapturing())
+            showCapture.stopCapture("Recording saved because GlowQuest left foreground.");
+        showCapture.stopReplay(false,"Replay stopped when app left foreground.");
         fireworks.cancel(false,"Sequence stopped because app left foreground");
         engine.stop("Ready to play");
         isForeground=false;
@@ -375,14 +537,22 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         isForeground=true;
+        if(captureWaitingPermission && hasScanPermission())
+            mainHandler.post(()->{
+                if(captureWaitingPermission && isForeground)
+                    startShowCapture(queuedCaptureLabel,queuedCaptureMinutes);
+            });
         if(scoutWaitingPermission && hasScanPermission())
             mainHandler.post(() -> {
                 if(scoutWaitingPermission && isForeground) startScout(scoutShowAll);
             });
-        notifyUi();notifyScout();notifyFireworks();
+        notifyUi();notifyScout();notifyFireworks();notifyCapture();
     }
 
     @Override protected void onDestroy() {
+        if(showCapture.isCapturing())
+            showCapture.stopCapture("Recording saved on app exit.");
+        showCapture.stopReplay(false,"Replay stopped on app exit.");
         fireworks.cancel(false,"Sequence stopped");
         engine.stop("Stopped");
         scout.stop("Stopped");
